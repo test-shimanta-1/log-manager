@@ -25,6 +25,7 @@
             <th scope="col">Date</th>
             <th scope="col">Warning Level</th>
             <th scope="col">Event Type</th>
+             <th scope="col">Object Type</th>
             <th scope="col">Message</th>
           </tr>
         </thead>
@@ -47,6 +48,7 @@
                       echo '<span class="badge rounded-pill text-bg-danger">'.$res->warning_level.'</span>';
                   } ?></td>
                   <td><?php echo $res->event_type; ?></td>
+                  <td><?php echo $res->object_type; ?></td>
                   <td><?php echo $res->message; ?></td>
                 </tr>
                       <?php } ?>
