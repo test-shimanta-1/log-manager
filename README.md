@@ -40,3 +40,7 @@
 | **Front Load**        | `init`                          | WordPress initializes     | request_type                      |
 
 
+
+
+## different warning level
+There have multiple diferent warning level that we can integrate. error, bug, notice, published, modified, trashed, deleted, Login, Login Failed, Logout, 

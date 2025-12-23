@@ -33,6 +33,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
     global $wpdb;
     $table = $wpdb->prefix . 'event_db';
 
+    /** trash -> draft post status change */
     if($old_status === 'trash' && $new_status === 'draft'){
         $wpdb->insert(
             $table,
@@ -47,6 +48,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
             ]
         );
     }
+    /** direct move into trash */
     else if($new_status === 'trash'){
         $wpdb->insert(
             $table,
@@ -62,6 +64,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
         );
     }
     else if(wp_get_post_revisions($post->ID)){
+        /** 'draft' to 'publish' status change */
         if($old_status === 'draft' && $new_status === 'publish'){
             $wpdb->insert(
                 $table,
@@ -76,6 +79,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 ]
             );
         }else if($old_status !== 'draft' && $new_status === 'publish'){
+            $revisions_url = wp_get_post_revisions_url($post);
             $wpdb->insert(
                 $table,
                 [
@@ -85,7 +89,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                     'object_type' => 'Post',
                     'warning_level' => 'medium' ,
                     'event_type' => 'modified',
-                    'message'    => 'POST HAS BEEN UPDATED. '.'| Post ID: '.$post->ID.' |POST TYPE '.get_post_type($post->ID).' |POST TITLE '.get_the_title($post->ID),
+                    'message'    => 'Post has been updated. '."\n\n".' Post ID: '.$post->ID."\n\n".' POST TYPE '.get_post_type($post->ID)."\n\n".' POST TITLE '.get_the_title($post->ID)."\n\n".' POST REVISIONS URL:  <a href="'.$revisions_url.'" target="_blank">post revisions url</a>',
                 ]
             );
         }
@@ -103,7 +107,6 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 'message'    => 'NEW POST CREATED. '.'| Post ID: '.$post->ID.' |POST TYPE '.get_post_type($post->ID).' |POST TITLE '.get_the_title($post->ID),
             ]
         );
-
     }
 }
 

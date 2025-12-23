@@ -1,7 +1,7 @@
 <?php
 /*
- * Plugin Name:       IITK Log Manager
- * Description:       Handle the log access info for this iitk sub wevsite.
+ * Plugin Name:       Log Manager
+ * Description:       This plugin is designed to provide detailed insights into system activity logs. It allows administrators to track user actions such as creating, editing, and deleting posts, pages, and custom post types. Additionally, it records user login activity, including both successful and failed login attempts, for better monitoring and security.
  * Version:           1.10.3
  * Requires at least: 5.2
  * Requires PHP:      7.2
@@ -10,7 +10,7 @@
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Update URI:        https://example.com/my-plugin/
- * Text Domain:       iitk-log-manager
+ * Text Domain:       log-manager
  */
 
 function sdw_event_manager_scripts()
@@ -35,7 +35,7 @@ function sdw_add_event_db()
                     event_time varchar(10) NOT NULL,
                     object_type ENUM('Post', 'User', 'Media') NOT NULL,
                     warning_level ENUM('low', 'medium', 'high') NOT NULL,
-                    event_type ENUM('created', 'modified', 'trashed', 'deleted') NOT NULL,
+                    event_type ENUM('created', 'modified', 'trashed', 'deleted', 'Login', 'Failed Login') NOT NULL,
                     message varchar(1000) NOT NULL,
                     UNIQUE KEY id (id)
             ) $charset_collate;";
@@ -65,11 +65,11 @@ add_action('admin_menu', 'register_options_page');
 
 function log_manager_func()
 {
-    require (plugin_dir_path(__FILE__) . 'admin/dashboard.php');
+    require (plugin_dir_path(__FILE__) . '/includes/admin/dashboard.php');
 }
 
 /** invoking diff. events into plugin */
-require_once plugin_dir_path( __FILE__ ).'/includes/post-log-events.php';
-require_once plugin_dir_path( __FILE__ ).'/includes/user-log-events.php';
+require_once plugin_dir_path( __FILE__ ).'/includes/events/post-log-events.php';
+require_once plugin_dir_path( __FILE__ ).'/includes/events/user-log-events.php';
 
 ?>
