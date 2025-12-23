@@ -23,7 +23,7 @@ function sdw_post_delete_log($post_id){
                 'object_type' => 'Post',
                 'warning_level' => 'high' ,
                 'event_type' => 'deleted',
-                'message'    => 'POST DELETED. '.'| Post ID: '.$post->ID.' |POST TYPE '.get_post_type($post->ID).' |POST TITLE '.get_the_title($post->ID),
+                'message'    => 'Permanently deleted the post. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
         );
 }
@@ -44,7 +44,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 'object_type' => 'Post',
                 'warning_level' => 'high' ,
                 'event_type' => 'modified',
-                'message'    => 'POST RESTORED. '.'| Post ID: '.$post->ID.' |POST TYPE '.get_post_type($post->ID).' |POST TITLE '.get_the_title($post->ID),
+                'message'    => 'Post has been restored. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
         );
     }
@@ -59,7 +59,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 'object_type' => 'Post',
                 'warning_level' => 'high' ,
                 'event_type' => 'trashed',
-                'message'    => 'POST HAS BEEN TRASHED. '.'| Post ID: '.$post->ID.' |POST TYPE '.get_post_type($post->ID).' |POST TITLE '.get_the_title($post->ID),
+                'message'    => 'Post has been trashed. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
         );
     }
@@ -75,7 +75,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                     'object_type' => 'Post',
                     'warning_level' => 'medium' ,
                     'event_type' => 'modified',
-                    'message'    => 'FROM DRAFT TO PUBLISH. '.'| Post ID: '.$post->ID.' |POST TYPE '.get_post_type($post->ID).' |POST TITLE '.get_the_title($post->ID),
+                    'message'    => 'From draft to publish. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
                 ]
             );
         }else if($old_status !== 'draft' && $new_status === 'publish'){
@@ -89,7 +89,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                     'object_type' => 'Post',
                     'warning_level' => 'medium' ,
                     'event_type' => 'modified',
-                    'message'    => 'Post has been updated. '."\n\n".' Post ID: '.$post->ID."\n\n".' POST TYPE '.get_post_type($post->ID)."\n\n".' POST TITLE '.get_the_title($post->ID)."\n\n".' POST REVISIONS URL:  <a href="'.$revisions_url.'" target="_blank">post revisions url</a>',
+                    'message'    => 'Post has been updated. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>'.'<br/> Post revisions url:  <b><a href="'.$revisions_url.'" target="_blank">post revisions url</a></b>',
                 ]
             );
         }
@@ -104,7 +104,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 'object_type' => 'Post',
                 'warning_level' => 'low' ,
                 'event_type' => 'created',
-                'message'    => 'NEW POST CREATED. '.'| Post ID: '.$post->ID.' |POST TYPE '.get_post_type($post->ID).' |POST TITLE '.get_the_title($post->ID),
+                'message'    => 'New post created. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
         );
     }
