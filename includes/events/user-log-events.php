@@ -35,7 +35,7 @@ function sdw_plugin_handle_failed_login( $username ) {
                 'userid'     => $user->ID,
                 'event_time' => date("Y/m/d"),
                 'object_type' => 'User',
-                'warning_level' => 'Failed Login' ,
+                'warning_level' => 'Login Failed' ,
                 'event_type' => 'created',
                 'message'    => 'User login attempt failed',
             ]

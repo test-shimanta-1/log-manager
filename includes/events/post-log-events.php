@@ -43,7 +43,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 'event_time' => date("Y/m/d"),
                 'object_type' => 'Post',
                 'warning_level' => 'high' ,
-                'event_type' => 'modified',
+                'event_type' => 'restored',
                 'message'    => 'Post has been restored. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
         );

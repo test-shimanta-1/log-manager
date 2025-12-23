@@ -35,7 +35,7 @@ function sdw_add_event_db()
                     event_time varchar(10) NOT NULL,
                     object_type ENUM('Post', 'User', 'Media') NOT NULL,
                     warning_level ENUM('low', 'medium', 'high') NOT NULL,
-                    event_type ENUM('created', 'modified', 'trashed', 'deleted', 'Login', 'Failed Login') NOT NULL,
+                    event_type ENUM( 'created','modified','trashed','restored','deleted','Login','Login Failed','Logout','error','bug','notice','published') NOT NULL
                     message varchar(1000) NOT NULL,
                     UNIQUE KEY id (id)
             ) $charset_collate;";
