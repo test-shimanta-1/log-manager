@@ -33,6 +33,36 @@ class BXFT_Table extends WP_List_Table
             array_push($values, $like, $like, $like, $like);
         }
 
+        // if (!empty($_GET['from_date'])) {
+        //     $where[] = "DATE(event_time) >= %s";
+        //     $values[] = $_GET['from_date'];
+        // }
+
+        // if (!empty($_GET['to_date'])) {
+        //     $where[] = "DATE(event_time) <= %s";
+        //     $values[] = $_GET['to_date'];
+        // }
+
+        // if (!empty($_GET['filter_user'])) {
+        //     $where[] = "userid = %d";
+        //     $values[] = absint($_GET['filter_user']);
+        // }
+
+        // if (!empty($_GET['filter_role'])) {
+        //     $role_users = get_users([
+        //         'role'   => sanitize_text_field($_GET['filter_role']),
+        //         'fields' => 'ID'
+        //     ]);
+
+        //     if (!empty($role_users)) {
+        //         $placeholders = implode(',', array_fill(0, count($role_users), '%d'));
+        //         $where[] = "userid IN ($placeholders)";
+        //         $values = array_merge($values, $role_users);
+        //     } else {
+        //         $where[] = "1=0";
+        //     }
+        // }
+
         if (!empty($_GET['from_date'])) {
             $where[] = "DATE(event_time) >= %s";
             $values[] = $_GET['from_date'];
@@ -41,6 +71,25 @@ class BXFT_Table extends WP_List_Table
         if (!empty($_GET['to_date'])) {
             $where[] = "DATE(event_time) <= %s";
             $values[] = $_GET['to_date'];
+        }
+
+        if (!empty($_GET['filter_user'])) {
+            $where[] = "userid = %d";
+            $values[] = absint($_GET['filter_user']);
+        }
+
+        if (!empty($_GET['filter_role'])){
+            $role_user_ids = get_users([
+                'role'   => sanitize_text_field($_GET['filter_role']),
+                'fields' => 'ID'
+            ]);
+            if (!empty($role_user_ids)) {
+                $placeholders = implode(',', array_fill(0, count($role_user_ids), '%d'));
+                $where[] = "userid IN ($placeholders)";
+                $values  = array_merge($values, $role_user_ids);
+            } else {
+                $where[] = "1 = 0";
+            }
         }
 
         $where_sql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -93,6 +142,36 @@ class BXFT_Table extends WP_List_Table
             array_push($values, $like, $like, $like, $like);
         }
 
+        // if (!empty($_GET['from_date'])) {
+        //     $where[] = "DATE(event_time) >= %s";
+        //     $values[] = $_GET['from_date'];
+        // }
+
+        // if (!empty($_GET['to_date'])) {
+        //     $where[] = "DATE(event_time) <= %s";
+        //     $values[] = $_GET['to_date'];
+        // }
+
+        // if (!empty($_GET['filter_user'])) {
+        //     $where[] = "userid = %d";
+        //     $values[] = absint($_GET['filter_user']);
+        // }
+
+        // if (!empty($_GET['filter_role'])) {
+        //     $role_users = get_users([
+        //         'role'   => sanitize_text_field($_GET['filter_role']),
+        //         'fields' => 'ID'
+        //     ]);
+
+        //     if (!empty($role_users)) {
+        //         $placeholders = implode(',', array_fill(0, count($role_users), '%d'));
+        //         $where[] = "userid IN ($placeholders)";
+        //         $values = array_merge($values, $role_users);
+        //     } else {
+        //         $where[] = "1=0";
+        //     }
+        // }
+
         if (!empty($_GET['from_date'])) {
             $where[] = "DATE(event_time) >= %s";
             $values[] = $_GET['from_date'];
@@ -101,6 +180,25 @@ class BXFT_Table extends WP_List_Table
         if (!empty($_GET['to_date'])) {
             $where[] = "DATE(event_time) <= %s";
             $values[] = $_GET['to_date'];
+        }
+
+        if (!empty($_GET['filter_user'])) {
+            $where[] = "userid = %d";
+            $values[] = absint($_GET['filter_user']);
+        }
+
+        if (!empty($_GET['filter_role'])){
+            $role_user_ids = get_users([
+                'role'   => sanitize_text_field($_GET['filter_role']),
+                'fields' => 'ID'
+            ]);
+            if (!empty($role_user_ids)) {
+                $placeholders = implode(',', array_fill(0, count($role_user_ids), '%d'));
+                $where[] = "userid IN ($placeholders)";
+                $values  = array_merge($values, $role_user_ids);
+            } else {
+                $where[] = "1 = 0";
+            }
         }
 
         $where_sql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -238,27 +336,49 @@ class BXFT_Table extends WP_List_Table
     public function extra_tablenav($which)
     {
         if ($which !== 'top') {
-            return;
-        }
-
-        $from = esc_attr($_GET['from_date'] ?? '');
-        $to = esc_attr($_GET['to_date'] ?? '');
-        ?>
-        <div class="alignleft actions">
-
-            <label for="from_date" class="screen-reader-text">From date</label>
-            <input type="date" name="from_date" value="<?php echo $from; ?>" />
-
-            <label for="to_date" class="screen-reader-text">To date</label>
-            <input type="date" name="to_date" value="<?php echo $to; ?>" />
-
-            <?php submit_button(__('Filter'), '', 'filter_action', false); ?>
-
-        </div>
-        <?php
+        return;
     }
 
+    $from  = esc_attr($_GET['from_date'] ?? '');
+    $to    = esc_attr($_GET['to_date'] ?? '');
+    $role  = esc_attr($_GET['filter_role'] ?? '');
+    $user  = absint($_GET['filter_user'] ?? 0);
 
+    $roles = wp_roles()->roles;
+    $users = get_users(['orderby' => 'display_name']);
+    ?>
+    <div class="alignleft actions">
+
+        <!-- From Date -->
+        <input type="date" name="from_date" value="<?php echo $from; ?>" />
+
+        <!-- To Date -->
+        <input type="date" name="to_date" value="<?php echo $to; ?>" />
+
+        <!-- Role Filter -->
+        <select name="filter_role">
+            <option value="">All Roles</option>
+            <?php foreach ($roles as $key => $r) : ?>
+                <option value="<?php echo esc_attr($key); ?>" <?php selected($role, $key); ?>>
+                    <?php echo esc_html($r['name']); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <!-- User Filter -->
+        <select name="filter_user">
+            <option value="">All Users</option>
+            <?php foreach ($users as $u) : ?>
+                <option value="<?php echo $u->ID; ?>" <?php selected($user, $u->ID); ?>>
+                    <?php echo esc_html($u->display_name); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <?php submit_button(__('Filter'), '', 'filter_action', false); ?>
+    </div>
+    <?php
+    }
 }
 
 function display_bxft_table()
