@@ -14,7 +14,7 @@ class BXFT_Table extends WP_List_Table
     {
         return array(
             'event_time' => array('event_time', true),
-            'warning_level' => array('warning_level', false),
+            'severity' => array('severity', false),
             'event_type' => array('event_type', false),
             'object_type' => array('object_type', false),
         );
@@ -132,7 +132,7 @@ class BXFT_Table extends WP_List_Table
             'userid' => 'User',
             'ip_address' => 'IP Address',
             'event_time' => 'Date',
-            'warning_level' => 'Warning Level',
+            'severity' => 'Severity',
             'event_type' => 'Event Type',
             'object_type' => 'Object Type',
             'message' => 'Message',

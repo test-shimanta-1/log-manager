@@ -21,7 +21,7 @@ function sdw_post_delete_log($post_id){
                 'userid'     => get_current_user_id(),
                 'event_time' => date("Y/m/d"),
                 'object_type' => 'Post',
-                'warning_level' => 'high' ,
+                'severity' => 'high' ,
                 'event_type' => 'deleted',
                 'message'    => 'Permanently deleted the post. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
@@ -42,7 +42,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 'userid'     => get_current_user_id(),
                 'event_time' => date("Y/m/d"),
                 'object_type' => 'Post',
-                'warning_level' => 'high' ,
+                'severity' => 'high' ,
                 'event_type' => 'restored',
                 'message'    => 'Post has been restored. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
@@ -57,7 +57,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 'userid'     => get_current_user_id(),
                 'event_time' => date("Y/m/d"),
                 'object_type' => 'Post',
-                'warning_level' => 'high' ,
+                'severity' => 'high' ,
                 'event_type' => 'trashed',
                 'message'    => 'Post has been trashed. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
@@ -73,13 +73,13 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                     'userid'     => get_current_user_id(),
                     'event_time' => date("Y/m/d"),
                     'object_type' => 'Post',
-                    'warning_level' => 'medium' ,
+                    'severity' => 'medium' ,
                     'event_type' => 'modified',
                     'message'    => 'Post status has been changed from draft to publish. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
                 ]
             );
         }else if($old_status !== 'draft' && $new_status === 'publish'){
-            $revisions_url = wp_get_post_revisions_url($post);
+            $revisions_url = wp_get_post_revisions_url($post->ID);
             $wpdb->insert(
                 $table,
                 [
@@ -87,7 +87,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                     'userid'     => get_current_user_id(),
                     'event_time' => date("Y/m/d"),
                     'object_type' => 'Post',
-                    'warning_level' => 'medium' ,
+                    'severity' => 'medium' ,
                     'event_type' => 'modified',
                     'message'    => 'Post has been updated. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>'.'<br/> Post revisions url:  <b><a href="'.$revisions_url.'" target="_blank">post revisions url</a></b>',
                 ]
@@ -102,7 +102,7 @@ function sdw_post_logs( $new_status, $old_status, $post ) {
                 'userid'     => get_current_user_id(),
                 'event_time' => date("Y/m/d"),
                 'object_type' => 'Post',
-                'warning_level' => 'low' ,
+                'severity' => 'low' ,
                 'event_type' => 'created',
                 'message'    => 'New post has been created. '.'<br/>Post Title: <b>'.get_the_title($post->ID).'</b><br> Post ID: <b>'.$post->ID.'</b> <br/>Post Type: <b>'.get_post_type($post->ID).'</b>',
             ]
