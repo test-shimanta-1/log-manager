@@ -96,6 +96,15 @@ class Log_Manager_Log_Table extends WP_List_Table
 			</select>
 
 			<?php submit_button('Filter', '', 'filter_action', false); ?>
+
+			<!-- Export Dropdown -->
+			<select name="export_type">
+				<option value="">Export</option>
+				<option value="csv" <?php selected($_GET['export_type'] ?? '', 'csv'); ?>>Export CSV</option>
+			</select>
+
+			<?php submit_button('Export', 'secondary', 'export_action', false); ?>
+
 		</div>
 		<?php
 	}
@@ -128,12 +137,13 @@ class Log_Manager_Log_Table extends WP_List_Table
 	 * @param string $which
 	 * @return void
 	 */
-	protected function pagination( $which ) {
-		if ( 'top' === $which ) {
+	protected function pagination($which)
+	{
+		if ('top' === $which) {
 			return; // hide ONLY top pagination
 		}
 
-		parent::pagination( $which ); // keep bottom pagination
+		parent::pagination($which); // keep bottom pagination
 	}
 
 
@@ -489,3 +499,142 @@ class Log_Manager_Dashboard
 		<?php
 	}
 }
+
+
+/**
+ * Handles Log Manager CSV export.
+ * Exports all logs or filtered logs based on active filters.
+ *
+ * @return void
+ */
+function log_manager_export_csv_handler()
+{
+
+	// Only run in admin area
+	if (!is_admin()) {
+		return;
+	}
+
+	// Check if export is triggered
+	if (
+		empty($_GET['export_action']) ||
+		empty($_GET['export_type']) ||
+		$_GET['export_type'] !== 'csv'
+	) {
+		return;
+	}
+
+	// Ensure current user has permission
+	if (!current_user_can('manage_options')) {
+		return;
+	}
+
+	global $wpdb;
+	$table = $wpdb->prefix . 'event_db';
+
+	$where = [];
+	$values = [];
+
+	/**
+	 * Search filter
+	 */
+	if (!empty($_GET['s'])) {
+		$like = '%' . $wpdb->esc_like($_GET['s']) . '%';
+		$where[] = "(ip_address LIKE %s 
+                    OR event_type LIKE %s 
+                    OR object_type LIKE %s 
+                    OR message LIKE %s
+                    OR severity LIKE %s)";
+		array_push($values, $like, $like, $like, $like, $like);
+	}
+
+	/**
+	 * Date filters
+	 */
+	if (!empty($_GET['start_date'])) {
+		$where[] = "event_time >= %s";
+		$values[] = str_replace('-', '/', $_GET['start_date']);
+	}
+
+	if (!empty($_GET['end_date'])) {
+		$where[] = "event_time <= %s";
+		$values[] = str_replace('-', '/', $_GET['end_date']);
+	}
+
+	/**
+	 * User filter
+	 */
+	if (!empty($_GET['user_id'])) {
+		$where[] = "userid = %d";
+		$values[] = absint($_GET['user_id']);
+	}
+
+	/**
+	 * Severity filter
+	 */
+	if (!empty($_GET['severity'])) {
+		$where[] = "severity = %s";
+		$values[] = sanitize_text_field($_GET['severity']);
+	}
+
+	/**
+	 * Role filter
+	 */
+	if (!empty($_GET['role'])) {
+		$user_ids = get_users([
+			'role' => sanitize_text_field($_GET['role']),
+			'fields' => 'ID',
+		]);
+
+		if (!empty($user_ids)) {
+			$where[] = 'userid IN (' . implode(',', array_map('absint', $user_ids)) . ')';
+		} else {
+			$where[] = '1=0'; // No users with this role
+		}
+	}
+
+	$where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+	$sql = "SELECT * FROM $table $where_sql ORDER BY id DESC";
+
+	$results = $values
+		? $wpdb->get_results($wpdb->prepare($sql, $values), ARRAY_A)
+		: $wpdb->get_results($sql, ARRAY_A);
+
+	// Set headers for CSV download
+	header('Content-Type: text/csv; charset=utf-8');
+	header('Content-Disposition: attachment; filename=log-manager-' . date('Y-m-d') . '.csv');
+	header('Pragma: no-cache');
+	header('Expires: 0');
+
+	$output = fopen('php://output', 'w');
+
+	// Column headers
+	fputcsv($output, [
+		'ID',
+		'User ID',
+		'IP Address',
+		'Date',
+		'Severity',
+		'Event Type',
+		'Object Type',
+		'Message',
+	]);
+
+	// Export rows
+	foreach ($results as $row) {
+		fputcsv($output, [
+			$row['id'],
+			$row['userid'],
+			$row['ip_address'],
+			$row['event_time'],
+			$row['severity'],
+			$row['event_type'],
+			$row['object_type'],
+			wp_strip_all_tags($row['message']),
+		]);
+	}
+
+	fclose($output);
+	exit;
+}
+add_action('admin_init', 'log_manager_export_csv_handler');
