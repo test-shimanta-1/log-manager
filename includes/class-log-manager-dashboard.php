@@ -123,6 +123,21 @@ class Log_Manager_Log_Table extends WP_List_Table
 	}
 
 	/**
+	 * Override table navigation to remove top pagination
+	 *
+	 * @param string $which
+	 * @return void
+	 */
+	protected function pagination( $which ) {
+		if ( 'top' === $which ) {
+			return; // hide ONLY top pagination
+		}
+
+		parent::pagination( $which ); // keep bottom pagination
+	}
+
+
+	/**
 	 * Handles bulk delete action
 	 * 
 	 * @return void
@@ -473,5 +488,4 @@ class Log_Manager_Dashboard
 		</div>
 		<?php
 	}
-
 }
