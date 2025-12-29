@@ -1,0 +1,50 @@
+Bugs
+
+Post-Types/Pages
+1. all type of post chnages not captured. ex: draft -> publish, draft -> private, public -> private.
+2. for post changes revisions id stored the post old ID.
+3. changes/assign proper severity to post changes.
+
+=====================================================
+Topic: Severity
+
+1️⃣ Severity Levels (Fixed Standard)
+
+Use only these values everywhere in the plugin:
+
+Severity	Purpose
+info	Normal, expected activity
+notice	Important change, but not dangerous
+warning	Suspicious or abnormal behavior
+error	Destructive or harmful action
+critical	High-risk, large-scale impact
+
+2️⃣ Post / Page / Custom Post Type Events
+
+This applies to posts, pages, and all CPTs.
+
+Event	Description	Severity
+Post Created	New post/page created	info
+Post Updated	Content updated	info
+Post Status Changed	draft → publish, publish → private, etc.	notice
+Post Trashed	Sent to trash	warning
+Post Restored	Restored from trash	notice
+Post Deleted (Permanent)	Deleted from trash	error
+Bulk Status Change	Multiple posts status changed	warning
+Bulk Trash	Multiple posts trashed	error
+Bulk Delete	Multiple posts permanently deleted	critical
+Scheduled Post Published	Auto publish by cron	info
+
+3️⃣ User Authentication & Account Events
+Event	Description	Severity
+Login Success	Valid user login	info
+Login Failed	Wrong username/password	warning
+Multiple Login Failures	Repeated failed attempts	error
+Logout	User logged out	info
+Password Reset Requested	Forgot password email requested	notice
+Password Reset Completed	Password changed successfully	notice
+User Registered	New user account created	notice
+User Deleted	User account removed	error
+Role Changed	User role updated	notice
+
+================================================================

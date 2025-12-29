@@ -1,26 +1,30 @@
 # Log Manager
 
-Log Manager is a WordPress plugin designed to monitor, record, and display activity logs across a WordPress website. It enables administrators to track actions performed by both authenticated and anonymous users, providing visibility into user behavior, content changes, and authentication events.
+**Log Manager** is a WordPress plugin that monitors, records, and displays activity logs across a WordPress website. It enables administrators to track actions performed by users and system processes, providing clear visibility into content changes, authentication events, and overall site activity.
 
-The plugin is intended to help site owners, administrators, and developers audit activity, improve security monitoring, and maintain a reliable history of system events.
+The plugin is designed to help site owners, administrators, and developers audit user behavior, enhance security monitoring, and maintain a reliable history of important system events.
 
 ---
 
 ## Overview
 
-Log Manager captures and stores detailed logs related to user actions and system events. These logs can be filtered, searched, exported, and managed through an intuitive administrative interface.
+Log Manager captures and stores detailed logs related to user actions and system-level events within WordPress. All logs are accessible through an intuitive administrative interface, where they can be filtered, searched, and reviewed efficiently.
 
-The plugin supports logging across default post types, custom post types, pages, and authentication workflows.
+The plugin supports logging across:
+- Default post types
+- Custom post types
+- Pages
+- User authentication workflows
 
 ---
 
 ## Use Cases
 
-- Monitoring user activity on posts, pages, and custom post types
-- Tracking login, logout, and failed login attempts
-- Auditing content changes made by specific users
-- Reviewing site activity for security and compliance purposes
-- Maintaining a historical record of administrative and user actions
+- Monitor user activity on posts, pages, and custom post types
+- Track login, logout, and failed authentication attempts
+- Audit content changes made by specific users or roles
+- Review site activity for security and compliance purposes
+- Maintain a historical record of administrative and user actions
 
 ---
 
@@ -28,45 +32,49 @@ The plugin supports logging across default post types, custom post types, pages,
 
 ### Activity Tracking
 
-#### Post Types and Pages
-- Detects actions such as:
-  - Publish
-  - Update
-  - Restore
-  - Trash
-  - Delete
-- Supports all default and custom post types
+#### Posts, Pages & Custom Post Types
+Tracks the following actions:
+- Publish
+- Update
+- Restore
+- Move to Trash
+- Permanent Delete
+
+All default and custom post types are supported automatically.
 
 #### Authentication Activity
-- Successful login attempts
+- Successful user login
 - Failed login attempts
 - User logout activity
-- Logs both logged-in and anonymous user requests where applicable
+- Logs both authenticated and anonymous actions where applicable
 
 ---
 
 ### Log Management
 
-#### Pagination and Record Count
+#### Pagination & Record Count
 - Logs are displayed using pagination for improved performance
 - Total number of log records is shown for easy reference
+- Configurable records-per-page option
 
 #### Severity Levels
-- Logs are categorized by severity level:
-  - Low
-  - Medium
-  - High
-- Logs can be filtered and sorted based on severity
+Each log entry is categorized by severity:
+- **Low** – Informational or routine actions
+- **Medium** – Important changes requiring attention
+- **High** – Critical or security-related actions
+
+Logs can be filtered and sorted by severity level.
 
 ---
 
-### Filtering and Search
+### Filtering & Search
 
 - Filter logs by:
   - Custom date range
-  - Specific user roles
-  - Individual users
-- Combine multiple filters (e.g., user, role, and date range)
+  - Specific users
+  - User roles
+  - Severity level
+- Combine multiple filters (e.g., user + role + date range)
 - Search logs using keyword-based queries
 
 ---
@@ -80,9 +88,9 @@ The plugin supports logging across default post types, custom post types, pages,
 
 ---
 
-### Housekeeping and Data Retention
+### Housekeeping & Data Retention
 
-- Supports scheduled cleanup using WordPress CRON
+- Scheduled cleanup using WordPress CRON
 - Automatically removes outdated or unnecessary log data
 - Helps maintain optimal database performance
 
@@ -93,8 +101,8 @@ The plugin supports logging across default post types, custom post types, pages,
 ### Manual Installation
 
 1. Download the plugin folder named `log-manager`
-2. Upload the folder to the following directory `/wp-content/plugins`
-3. Activate the plugin.
+2. Upload the folder to `/wp-content/plugins/`
+3. Activate the plugin from the WordPress Admin Dashboard
 
 ---
 
@@ -102,5 +110,13 @@ The plugin supports logging across default post types, custom post types, pages,
 
 - WordPress version 6.0 or higher
 - PHP version 7.2 or higher
-- MySQL 5.6+
+- MySQL version 5.6 or higher
 
+---
+
+## Intended Audience
+
+- WordPress site administrators
+- Developers managing content-driven websites
+- Teams requiring activity auditing and monitoring
+- Security-conscious website owners
