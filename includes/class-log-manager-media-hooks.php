@@ -34,7 +34,7 @@ class Log_Manager_Media_Hooks
         Log_Manager_Logger::insert([
             'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '',
             'userid'      => get_current_user_id(),
-            'event_time'  => current_time( 'mysql' ),
+            'event_time'  => date('Y/m/d H:i:s'),
             'object_type' => 'Media',
             'severity'    => 'info',
             'event_type'  => 'uploaded',
@@ -53,7 +53,7 @@ class Log_Manager_Media_Hooks
         Log_Manager_Logger::insert([
             'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '',
             'userid'      => get_current_user_id(),
-            'event_time'  => current_time( 'mysql' ),
+            'event_time'  => date('Y/m/d H:i:s'),
             'object_type' => 'Media',
             'severity'    => 'info',
             'event_type'  => 'updated',
@@ -76,7 +76,7 @@ class Log_Manager_Media_Hooks
         Log_Manager_Logger::insert([
             'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '',
             'userid'      => get_current_user_id(),
-            'event_time'  => current_time( 'mysql' ),
+            'event_time'  => date('Y/m/d H:i:s'),
             'object_type' => 'Media',
             'severity'    => 'warning',
             'event_type'  => 'trashed',
@@ -97,7 +97,7 @@ class Log_Manager_Media_Hooks
         Log_Manager_Logger::insert([
             'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '',
             'userid'      => get_current_user_id(),
-            'event_time'  => current_time( 'mysql' ),
+            'event_time'  => date('Y/m/d H:i:s'),
             'object_type' => 'Media',
             'severity'    => 'info',
             'event_type'  => 'restored',
@@ -114,7 +114,7 @@ class Log_Manager_Media_Hooks
         Log_Manager_Logger::insert([
             'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '',
             'userid'      => get_current_user_id(),
-            'event_time'  => current_time( 'mysql' ),
+            'event_time'  => date('Y/m/d H:i:s'),
             'object_type' => 'Media',
             'severity'    => 'critical',
             'event_type'  => 'deleted',
