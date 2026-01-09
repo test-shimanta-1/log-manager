@@ -37,7 +37,7 @@ class Log_Manager_Media_Hooks
             'event_time'  => date('Y/m/d H:i:s'),
             'object_type' => 'Media',
             'severity'    => 'info',
-            'event_type'  => 'uploaded',
+            'event_type'  => 'published',
             'message'     => 'Media uploaded'
                 . '<br/>ID: <b>' . $attachment_id . '</b>'
                 . '<br/>File: <b>' . basename( $file ) . '</b>'
@@ -56,7 +56,7 @@ class Log_Manager_Media_Hooks
             'event_time'  => date('Y/m/d H:i:s'),
             'object_type' => 'Media',
             'severity'    => 'info',
-            'event_type'  => 'updated',
+            'event_type'  => 'modified',
             'message'     => 'Media details updated'
                 . '<br/>ID: <b>' . $post_ID . '</b>'
                 . '<br/>Old Title: <b>' . $post_before->post_title . '</b>'
