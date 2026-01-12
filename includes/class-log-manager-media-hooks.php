@@ -30,6 +30,7 @@ class Log_Manager_Media_Hooks
     {
         $attachment = get_post( $attachment_id );
         $file       = get_attached_file( $attachment_id );
+        $attachment_url = wp_get_attachment_url($attachment_id);
 
         Log_Manager_Logger::insert([
             'ip_address'  => $_SERVER['REMOTE_ADDR'] ?? '',
@@ -41,7 +42,8 @@ class Log_Manager_Media_Hooks
             'message'     => 'Media uploaded'
                 . '<br/>ID: <b>' . $attachment_id . '</b>'
                 . '<br/>File: <b>' . basename( $file ) . '</b>'
-                . '<br/>Type: <b>' . $attachment->post_mime_type . '</b>',
+                . '<br/>Type: <b>' . $attachment->post_mime_type . '</b>'
+                . '<br/>Media Url: <b><a href="' . esc_url($attachment_url) . '" target="_blank">View Media</a></b>',
         ]);
     }
 

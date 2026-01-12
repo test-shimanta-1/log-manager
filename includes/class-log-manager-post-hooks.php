@@ -15,6 +15,8 @@ class Log_Manager_Post_Hooks
      */
     protected static $before_term_update = [];
 
+    protected static $featured_image_logged = [];
+
     /**
      * Register post-related hooks for logging post lifecycle events.
      *
@@ -41,7 +43,152 @@ class Log_Manager_Post_Hooks
         add_action('acf/save_post', [$this, 'sdw_capture_taxonomy_acf_before_save'], 5);
         add_action('acf/save_post', [$this, 'sdw_taxonomy_acf_after_log'], 20);
 
+        // Featured image hooks
+        add_action('add_post_meta', [$this, 'sdw_featured_image_added'], 10, 4);
+        add_action('update_post_meta', [$this, 'sdw_featured_image_updated'], 10, 4);
+        add_action('delete_post_meta', [$this, 'sdw_featured_image_removed'], 10, 4);
     }
+
+
+    /**
+     * Logs when a featured image is added to a post.
+     *
+     * Triggered when `_thumbnail_id` post meta is added.
+     *
+     * @param int    $meta_id  
+     * @param int    $post_id  
+     * @param string $meta_key 
+     * @param mixed  $meta_value Meta value (attachment ID).
+     *
+     * @return void
+     */
+    public function sdw_featured_image_added($meta_id, $post_id, $meta_key, $meta_value = null)
+    {
+        if ($meta_key !== '_thumbnail_id') {
+            return;
+        }
+
+        if (isset(self::$featured_image_logged[$post_id])) {
+            return;
+        }
+
+        self::$featured_image_logged[$post_id] = true;
+        $this->log_featured_image_event($post_id, $meta_value, 'assigned');
+    }
+
+    /**
+     * Logs when a featured image is updated on a post.
+     *
+     * @param int    $meta_id   
+     * @param int    $post_id   
+     * @param string $meta_key  
+     * @param mixed  $meta_value New attachment ID.
+     *
+     * @return void
+     */
+    public function sdw_featured_image_updated($meta_id, $post_id, $meta_key, $meta_value = null)
+    {
+        if ($meta_key !== '_thumbnail_id') {
+            return;
+        }
+
+        if (empty($meta_value)) {
+            return; // removal handled separately
+        }
+
+        if (isset(self::$featured_image_logged[$post_id])) {
+            return;
+        }
+
+        self::$featured_image_logged[$post_id] = true;
+        $this->log_featured_image_event($post_id, $meta_value, 'modified');
+    }
+
+    /**
+     * Logs when a featured image is removed from a post.
+     *
+     * @param array  $meta_ids   
+     * @param int    $post_id    
+     * @param string $meta_key   
+     * @param mixed  $meta_value Meta value.
+     *
+     * @return void
+     */
+    public function sdw_featured_image_removed($meta_ids, $post_id, $meta_key, $meta_value = null)
+    {
+        if ($meta_key !== '_thumbnail_id') {
+            return;
+        }
+
+        if (isset(self::$featured_image_logged[$post_id])) {
+            return;
+        }
+
+        self::$featured_image_logged[$post_id] = true;
+        $post = get_post($post_id);
+        if (!$post) {
+            return;
+        }
+
+        if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+            return;
+        }
+
+        Log_Manager_Logger::insert([
+            'ip_address' => sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? ''),
+            'userid' => get_current_user_id(),
+            'event_time' => current_time('mysql'),
+            'object_type' => 'Media',
+            'severity' => 'notice',
+            'event_type' => 'deleted',
+            'message' =>
+                'Featured image removed from post.' .
+                '<br/>Post ID: <b>' . absint($post_id) . '</b>' .
+                '<br/>Post Title: <b>' . esc_html($post->post_title) . '</b>' .
+                '<br/>Edit Post: <a href="' . esc_url(get_edit_post_link($post_id)) . '" target="_blank">Edit</a>'
+        ]);
+    }
+
+    /**
+     * Inserts a log entry for featured image events.
+     *
+     * @param int    $post_id       
+     * @param int    $attachment_id 
+     * @param string $event_type    Event type (assigned|modified).
+     *
+     * @return void
+     */
+    private function log_featured_image_event($post_id, $attachment_id, $event_type)
+    {
+        $post = get_post($post_id);
+        if (!$post) {
+            return;
+        }
+
+        if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+            return;
+        }
+
+        $media_url = wp_get_attachment_url($attachment_id);
+        if (!$media_url) {
+            return;
+        }
+
+        Log_Manager_Logger::insert([
+            'ip_address' => sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? ''),
+            'userid' => get_current_user_id(),
+            'event_time' => current_time('mysql'),
+            'object_type' => 'Media',
+            'severity' => 'notice',
+            'event_type' => $event_type,
+            'message' =>
+                'Media ID <b>' . absint($attachment_id) . '</b> ' . esc_html($event_type) . ' as featured image.' .
+                '<br/>Post ID: <b>' . absint($post_id) . '</b>' .
+                '<br/>Post Title: <b>' . esc_html($post->post_title) . '</b>' .
+                '<br/>Media URL: <a href="' . esc_url($media_url) . '" target="_blank">View Media</a>'
+        ]);
+    }
+
 
     /**
      * Log post status transitions and content updates.
@@ -183,14 +330,14 @@ class Log_Manager_Post_Hooks
         }
 
         Log_Manager_Logger::insert([
-                'ip_address' => $_SERVER['REMOTE_ADDR'],
-                'userid' => get_current_user_id(),
-                'event_time' => date('Y/m/d H:i:s'),
-                'object_type' => 'Post',
-                'severity' => 'notice',
-                'event_type' => 'deleted',
-                'message' => 'Permanently deleted the post. ' . '<br/>Post Title: <b>' . get_the_title($post->ID) . '</b><br> Post ID: <b>' . $post->ID . '</b> <br/>Post Type: <b>' . get_post_type($post->ID) . '</b>',
-            ]);
+            'ip_address' => $_SERVER['REMOTE_ADDR'],
+            'userid' => get_current_user_id(),
+            'event_time' => date('Y/m/d H:i:s'),
+            'object_type' => 'Post',
+            'severity' => 'notice',
+            'event_type' => 'deleted',
+            'message' => 'Permanently deleted the post. ' . '<br/>Post Title: <b>' . get_the_title($post->ID) . '</b><br> Post ID: <b>' . $post->ID . '</b> <br/>Post Type: <b>' . get_post_type($post->ID) . '</b>',
+        ]);
     }
 
     /**
@@ -263,7 +410,6 @@ class Log_Manager_Post_Hooks
      */
     public function sdw_taxonomy_update_log($term_id, $tt_id, $taxonomy)
     {
-
         if (!isset(self::$before_term_update[$term_id])) {
             return;
         }
@@ -333,7 +479,7 @@ class Log_Manager_Post_Hooks
             'object_type' => 'Taxonomy',
             'severity' => 'notice',
             'event_type' => 'modified',
-            'message' => implode('<br/>', $changes),
+            'message' => implode('<br/>', $changes . "<b>abacus</b>"),
         ]);
 
         unset(self::$before_term_update[$term_id]);
@@ -400,15 +546,63 @@ class Log_Manager_Post_Hooks
      */
     public function sdw_taxonomy_assignment_log($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids)
     {
-        // Prevent crashes during term deletion
-        if (doing_action('delete_term') || empty($object_id))
+        // Only for posts + categories
+        if ('post' !== get_post_type($object_id) || 'category' !== $taxonomy) {
             return;
+        }
 
-        $added = array_diff($tt_ids, $old_tt_ids);
-        $removed = array_diff($old_tt_ids, $tt_ids);
-
-        if (!$added && !$removed)
+        $post = get_post($object_id);
+        if (!$post) {
             return;
+        }
+
+        $new_term_ids = array_map('intval', (array) $terms);
+        $old_term_ids = array_map('intval', (array) $old_tt_ids);
+
+        $added_ids = array_diff($new_term_ids, $old_term_ids);
+        $removed_ids = array_diff($old_term_ids, $new_term_ids);
+
+        if (empty($added_ids) && empty($removed_ids)) {
+            return;
+        }
+
+        $added_names = [];
+        $removed_names = [];
+
+        if (!empty($added_ids)) {
+            $added_terms = get_terms([
+                'taxonomy' => 'category',
+                'include' => $added_ids,
+                'hide_empty' => false,
+            ]);
+            $added_names = wp_list_pluck($added_terms, 'name');
+        }
+
+        if (!empty($removed_ids)) {
+            $removed_terms = get_terms([
+                'taxonomy' => 'category',
+                'include' => $removed_ids,
+                'hide_empty' => false,
+            ]);
+            $removed_names = wp_list_pluck($removed_terms, 'name');
+        }
+
+        $messages = [];
+
+        if (!empty($added_names)) {
+            $messages[] =
+                '<b>' . esc_html(implode(', ', $added_names)) . '</b> category have been added to the post.';
+        }
+
+        if (!empty($removed_names)) {
+            $messages[] =
+                '<b>' . esc_html(implode(', ', $removed_names)) . '</b> category have been removed from the post.';
+        }
+
+        $messages[] =
+            '<br/>Post Title: <b>' . esc_html($post->post_title) . '</b>' .
+            '<br/>Post ID: <b>' . absint($object_id) . '</b>' .
+            '<br/><a href="' . esc_url(get_edit_post_link($post)) . '" target="_blank">View post in editor</a>';
 
         Log_Manager_Logger::insert([
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
@@ -417,7 +611,7 @@ class Log_Manager_Post_Hooks
             'object_type' => 'Taxonomy',
             'severity' => 'notice',
             'event_type' => 'assigned',
-            'message' => 'Taxonomy terms updated on object ID <b>' . $object_id . '</b>',
+            'message' => implode('<br/>', $messages),
         ]);
     }
 
@@ -501,7 +695,7 @@ class Log_Manager_Post_Hooks
             return;
         }
 
-        Log_Manager_Logger::insert( [
+        Log_Manager_Logger::insert([
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
             'userid' => get_current_user_id(),
             'event_time' => date('Y/m/d H:i:s'),
