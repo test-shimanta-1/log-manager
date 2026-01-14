@@ -633,11 +633,11 @@ class Log_Manager_Dashboard
 
 					<table class="widefat striped">
 						<tr>
-							<th>ID</th>
+							<th>Log ID</th>
 							<td id="lm-id"></td>
 						</tr>
 						<tr>
-							<th>User</th>
+							<th>User ID</th>
 							<td id="lm-user"></td>
 						</tr>
 						<tr>
@@ -645,7 +645,7 @@ class Log_Manager_Dashboard
 							<td id="lm-ip"></td>
 						</tr>
 						<tr>
-							<th>Date</th>
+							<th>Date & Time</th>
 							<td id="lm-date"></td>
 						</tr>
 						<tr>
@@ -821,10 +821,10 @@ function sdw_log_manager_export_csv_handler()
 	header('Content-Type: text/csv; charset=utf-8');
 	header('Content-Disposition: attachment; filename=log-manager-' . date('Y-m-d') . '.csv');
 	$output = fopen('php://output', 'w');
-	fputcsv($output, ['ID', 'User ID', 'IP Address', 'Date', 'Severity', 'Event Type', 'Object Type', 'Message']);
+	fputcsv($output, ['User ID', 'IP Address', 'Date & Time', 'Severity', 'Event Type', 'Object Type', 'Message']);
 	foreach ($results as $row) {
-		fputcsv($output, [$row['id'], $row['userid'], $row['ip_address'], $row['event_time'], $row['severity'], $row['event_type'], $row['object_type'], wp_strip_all_tags($row['message'])]);
-	}
+		fputcsv($output, [$row['userid'] ?: 'Guest',$row['ip_address'],$row['event_time'],ucfirst($row['severity']),$row['event_type'],$row['object_type'],$row['message']]);
+		}
 	fclose($output);
 	exit;
 }
@@ -967,10 +967,9 @@ function sdw_log_manager_export_pdf_handler()
 	<table>
 		<thead>
 			<tr>
-				<th>ID</th>
-				<th>User</th>
-				<th>IP</th>
-				<th>Date</th>
+				<th>User ID</th>
+				<th>IP Address</th>
+				<th>Date & Time</th>
 				<th>Severity</th>
 				<th>Event</th>
 				<th>Object</th>
@@ -980,14 +979,13 @@ function sdw_log_manager_export_pdf_handler()
 		<tbody>
 			<?php foreach ($logs as $log): ?>
 				<tr>
-					<td><?php echo esc_html($log['id']); ?></td>
 					<td><?php echo esc_html($log['userid'] ?: 'Guest'); ?></td>
 					<td><?php echo esc_html($log['ip_address']); ?></td>
 					<td><?php echo esc_html($log['event_time']); ?></td>
 					<td><?php echo esc_html(ucfirst($log['severity'])); ?></td>
 					<td><?php echo esc_html($log['event_type']); ?></td>
 					<td><?php echo esc_html($log['object_type']); ?></td>
-					<td><?php echo esc_html(wp_strip_all_tags($log['message'])); ?></td>
+					<td><?php echo esc_html($log['message']); ?></td>
 				</tr>
 			<?php endforeach; ?>
 		</tbody>
