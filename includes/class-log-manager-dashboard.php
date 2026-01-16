@@ -896,7 +896,6 @@ add_action('admin_init', 'sdw_log_manager_export_csv_handler');
  * @since 1.0.1
  * @package Log_Manager
  */
-use Mpdf\Mpdf;
 function sdw_log_manager_export_pdf_handler()
 {
 	if (!is_admin()) {
@@ -914,7 +913,7 @@ function sdw_log_manager_export_pdf_handler()
 	global $wpdb;
 	$table = $wpdb->prefix . 'log_db';
 
-	$where = [];
+	$where  = [];
 	$values = [];
 
 	if (!empty($_POST['s'])) {
@@ -928,29 +927,29 @@ function sdw_log_manager_export_pdf_handler()
 	}
 
 	if (!empty($_POST['start_date'])) {
-		$where[] = "event_time >= %s";
+		$where[]  = "event_time >= %s";
 		$values[] = $_POST['start_date'] . ' 00:00:00';
 	}
 
 	if (!empty($_POST['end_date'])) {
-		$where[] = "event_time <= %s";
+		$where[]  = "event_time <= %s";
 		$values[] = $_POST['end_date'] . ' 23:59:59';
 	}
 
 	if (!empty($_POST['user_id'])) {
-		$where[] = "userid = %d";
+		$where[]  = "userid = %d";
 		$values[] = absint($_POST['user_id']);
 	}
 
 	$allowed = array_keys(Log_Manager_Log_Table::get_allowed_severities());
 	if (!empty($_POST['severity']) && in_array($_POST['severity'], $allowed, true)) {
-		$where[] = "severity = %s";
+		$where[]  = "severity = %s";
 		$values[] = $_POST['severity'];
 	}
 
 	if (!empty($_POST['role'])) {
 		$user_ids = get_users([
-			'role' => sanitize_text_field($_POST['role']),
+			'role'   => sanitize_text_field($_POST['role']),
 			'fields' => 'ID',
 		]);
 
@@ -963,59 +962,47 @@ function sdw_log_manager_export_pdf_handler()
 
 	if (!empty($_POST['id']) && is_array($_POST['id'])) {
 		$placeholders = implode(',', array_fill(0, count($_POST['id']), '%d'));
-		$where[] = "id IN ($placeholders)";
-		$values = array_merge($values, array_map('absint', $_POST['id']));
+		$where[]      = "id IN ($placeholders)";
+		$values       = array_merge($values, array_map('absint', $_POST['id']));
 	}
 
 	$where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-	$sql = "SELECT * FROM $table $where_sql ORDER BY id DESC";
+	$sql       = "SELECT * FROM $table $where_sql ORDER BY id DESC";
 
 	$logs = $values
 		? $wpdb->get_results($wpdb->prepare($sql, $values), ARRAY_A)
 		: $wpdb->get_results($sql, ARRAY_A);
 
-	/* ---------- mPDF SETUP ---------- */
-	$upload_dir = wp_upload_dir();
-	$temp_dir = $upload_dir['basedir'] . '/mpdf-temp';
-
-	if (!file_exists($temp_dir)) {
-		wp_mkdir_p($temp_dir);
-	}
-
-	$mpdf = new Mpdf([
-		'tempDir' => $temp_dir,
-		'mode' => 'utf-8',
-		'format' => 'A4-L',
-	]);
-
 	/* ---------- PDF HTML ---------- */
 	ob_start();
 	?>
-	<style>
-		body {
-			font-family: sans-serif;
-			font-size: 11px;
-		}
-
-		h1 {
-			text-align: center;
-		}
-
-		table {
-			width: 100%;
-			border-collapse: collapse;
-		}
-
-		th,
-		td {
-			border: 1px solid #000;
-			padding: 6px;
-		}
-
-		th {
-			background: #f0f0f0;
-		}
-	</style>
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<meta charset="utf-8">
+		<style>
+			body {
+				font-family: DejaVu Sans, sans-serif;
+				font-size: 11px;
+			}
+			h1 {
+				text-align: center;
+			}
+			table {
+				width: 100%;
+				border-collapse: collapse;
+			}
+			th, td {
+				border: 1px solid #000;
+				padding: 6px;
+				vertical-align: top;
+			}
+			th {
+				background: #f0f0f0;
+			}
+		</style>
+	</head>
+	<body>
 
 	<h1>Log Manager Report</h1>
 
@@ -1045,14 +1032,29 @@ function sdw_log_manager_export_pdf_handler()
 			<?php endforeach; ?>
 		</tbody>
 	</table>
+
+	</body>
+	</html>
 	<?php
 	$html = ob_get_clean();
 
-	$mpdf->WriteHTML($html);
-	$mpdf->Output(
+	/* ---------- DOMPDF ---------- */
+	require_once LOG_MANAGER_PATH . 'vendor/dompdf/autoload.inc.php';
+
+	$options = new \Dompdf\Options();
+	$options->set('isRemoteEnabled', true);
+	$options->set('defaultFont', 'DejaVu Sans');
+
+	$dompdf = new \Dompdf\Dompdf($options);
+	$dompdf->loadHtml($html, 'UTF-8');
+	$dompdf->setPaper('A4', 'landscape');
+	$dompdf->render();
+
+	$dompdf->stream(
 		'log-manager-' . date('Y-m-d') . '.pdf',
-		'D'
+		['Attachment' => true]
 	);
+
 	exit;
 }
 add_action('admin_init', 'sdw_log_manager_export_pdf_handler');
