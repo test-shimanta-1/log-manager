@@ -41,7 +41,8 @@ class Log_Manager
         require_once LOG_MANAGER_PATH . 'includes/class-log-manager-user-hooks.php';
         require_once LOG_MANAGER_PATH . 'includes/class-log-manager-settings.php';
         require_once LOG_MANAGER_PATH . 'includes/class-log-manager-logger.php';
-        require_once LOG_MANAGER_PATH . 'includes/class-log-manager-media-hooks.php';  
+        require_once LOG_MANAGER_PATH . 'includes/class-log-manager-media-hooks.php';
+        require_once LOG_MANAGER_PATH . 'includes/class-log-manager-plugin-hooks.php';
     }
 
     /**
@@ -62,5 +63,6 @@ class Log_Manager
         new Log_Manager_User_Hooks();
         new Log_Manager_Settings();
         new Log_Manager_Media_Hooks();
+        new Log_Manager_Plugin_Hooks();
     }
 }
