@@ -26,7 +26,7 @@ class Log_Manager_DB
                     ip_address varchar(15) NOT NULL,
                     event_type ENUM( 'created','modified','trashed','restored','deleted','logged-in','login-failed','logout','published', 'assigned') NOT NULL,
                     event_time varchar(20) NOT NULL,
-                    object_type ENUM('Post', 'User', 'Media', 'Taxonomy') NOT NULL,
+                    object_type ENUM('Post', 'User', 'Media', 'Taxonomy', 'Settings') NOT NULL,
                     message varchar(1000) NOT NULL,
                     UNIQUE KEY id (id)
             ) $charset_collate;";
