@@ -1,10 +1,17 @@
 <?php
+/**
+ * Log Manager Uninstall Handler
+ *
+ * @package Log_Manager
+ */
 
-// if not defined then die.
+// Prevent direct access
 if (!defined('WP_UNINSTALL_PLUGIN')) {
-    die;
+    exit;
 }
 
-// drop a custom database table
 global $wpdb;
-$wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}log_db");
+
+// Drop the log table
+$table_name = $wpdb->prefix . 'log_manager_logs';
+$wpdb->query("DROP TABLE IF EXISTS $table_name");
