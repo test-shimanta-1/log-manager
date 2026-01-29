@@ -395,7 +395,6 @@ class Log_Manager_ACF_Tracker
     private function compare_basic_properties($old_basic, $new_basic)
     {
         $changes = [];
-
         $properties = ['title', 'description', 'active', 'menu_order'];
 
         foreach ($properties as $prop) {
@@ -419,7 +418,6 @@ class Log_Manager_ACF_Tracker
     private function compare_location_rules($old_location, $new_location)
     {
         $changes = [];
-
         $old_serialized = serialize($old_location);
         $new_serialized = serialize($new_location);
 
@@ -458,7 +456,6 @@ class Log_Manager_ACF_Tracker
             if (!empty($modified))
                 $changes['modified'] = $modified;
         }
-
         return $changes;
     }
 
@@ -566,7 +563,6 @@ class Log_Manager_ACF_Tracker
     private function compare_presentation_properties($old_presentation, $new_presentation)
     {
         $changes = [];
-
         $properties = [
             'position' => [
                 'normal' => 'Normal (after content)',
