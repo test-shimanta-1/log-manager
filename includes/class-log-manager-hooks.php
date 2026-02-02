@@ -1,7 +1,14 @@
 <?php
+/**
+ * Log Manager Hook class file
+ * 
+ * It handle hooks related to cpt, auth and users and wordpress admin changes
+ * 
+ * @package Log_Manager
+ * @since 1.0.6
+ */
 class Log_Manager_Hooks
 {
-
     private static $old_post_data = [];
     private static $old_meta_data = [];
     private static $old_option_values = [];
@@ -13,10 +20,11 @@ class Log_Manager_Hooks
     private static $processed_posts = [];
     private static $processed_terms = [];
     private static $stored_bulk_data = false;
-
     private static $old_acf_field_groups = [];
 
-
+    /**
+     * Initialize the Log Manager Hooks
+     */
     public static function init()
     {
         $instance = new self();
@@ -25,183 +33,182 @@ class Log_Manager_Hooks
 
     private function setup_hooks()
     {
-
         // Check if it's AJAX request
-        add_action('admin_init', [$this, 'check_ajax_request']);
+        add_action('admin_init', [$this, 'sdw_check_ajax_request']);
 
         // Check for bulk operations
-        add_action('load-edit.php', [$this, 'check_bulk_operation']);
-        add_action('load-edit-tags.php', [$this, 'check_bulk_operation_taxonomy']);
+        add_action('load-edit.php', [$this, 'sdw_check_bulk_operation']);
+        add_action('load-edit-tags.php', [$this, 'sdw_check_bulk_operation_taxonomy']);
 
         // Store old post data
-        add_action('wp_ajax_inline-save', [$this, 'store_old_post_data_ajax'], 1);
-        add_filter('wp_insert_post_data', [$this, 'store_old_post_data'], 10, 2);
+        add_action('wp_ajax_inline-save', [$this, 'sdw_store_old_post_data_ajax'], 1);
+        add_filter('wp_insert_post_data', [$this, 'sdw_store_old_post_data'], 10, 2);
 
         // Store old meta data
-        add_action('save_post', [$this, 'store_old_meta_data'], 5, 2);
+        add_action('save_post', [$this, 'sdw_store_old_meta_data'], 5, 2);
 
         // Store old taxonomy data - ENHANCED with more hooks
-        add_action('pre_post_update', [$this, 'store_old_taxonomy_data']);
-        add_action('wp_ajax_add-tag', [$this, 'store_old_taxonomy_data_ajax'], 1);
-        add_action('wp_ajax_inline-save-tax', [$this, 'store_old_taxonomy_data_ajax'], 1);
+        add_action('pre_post_update', [$this, 'sdw_store_old_taxonomy_data']);
+        add_action('wp_ajax_add-tag', [$this, 'sdw_store_old_taxonomy_data_ajax'], 1);
+        add_action('wp_ajax_inline-save-tax', [$this, 'sdw_store_old_taxonomy_data_ajax'], 1);
 
         // Store old user data
-        add_action('load-profile.php', [$this, 'store_old_user_data']);
-        add_action('load-user-edit.php', [$this, 'store_old_user_data']);
-        add_action('personal_options_update', [$this, 'store_old_user_data_for_update']);
-        add_action('edit_user_profile_update', [$this, 'store_old_user_data_for_update']);
+        add_action('load-profile.php', [$this, 'sdw_store_old_user_data']);
+        add_action('load-user-edit.php', [$this, 'sdw_store_old_user_data']);
+        add_action('personal_options_update', [$this, 'sdw_store_old_user_data_for_update']);
+        add_action('edit_user_profile_update', [$this, 'sdw_store_old_user_data_for_update']);
 
         // Store ACF field data
         if (function_exists('acf')) {
-            add_action('acf/save_post', [$this, 'store_old_acf_data'], 5);
-            // Store ACF field group data
-            // add_action('acf/update_field_group', [$this, 'store_old_acf_field_group_data'], 5);
+            add_action('acf/save_post', [$this, 'sdw_store_old_acf_data'], 5);
         }
 
         // Posts and Pages
-        add_action('save_post', [$this, 'log_post_save'], 20, 3);
-        add_action('wp_ajax_inline-save', [$this, 'log_quick_edit_save'], 20);
-        add_action('delete_post', [$this, 'log_post_delete'], 10, 1);
-        add_action('wp_trash_post', [$this, 'log_post_trash'], 10, 1);
-        add_action('untrash_post', [$this, 'log_post_untrash'], 10, 2);
+        add_action('save_post', [$this, 'sdw_log_post_save'], 20, 3);
+        add_action('wp_ajax_inline-save', [$this, 'sdw_log_quick_edit_save'], 20);
+        add_action('delete_post', [$this, 'sdw_log_post_delete'], 10, 1);
+        add_action('wp_trash_post', [$this, 'sdw_log_post_trash'], 10, 1);
+        add_action('untrash_post', [$this, 'sdw_log_post_untrash'], 10, 2);
 
         // Post revisions
-        add_action('_wp_put_post_revision', [$this, 'log_post_revision'], 10, 2);
+        add_action('_wp_put_post_revision', [$this, 'sdw_log_post_revision'], 10, 2);
 
         // Post meta changes
-        add_action('updated_post_meta', [$this, 'log_post_meta_update'], 10, 4);
-        add_action('added_post_meta', [$this, 'log_post_meta_add'], 10, 4);
-        add_action('deleted_post_meta', [$this, 'log_post_meta_delete'], 10, 4);
+        add_action('updated_post_meta', [$this, 'sdw_log_post_meta_update'], 10, 4);
+        add_action('added_post_meta', [$this, 'sdw_log_post_meta_add'], 10, 4);
+        add_action('deleted_post_meta', [$this, 'sdw_log_post_meta_delete'], 10, 4);
 
         // Users
-        add_action('user_register', [$this, 'log_user_register']);
-        add_action('profile_update', [$this, 'log_profile_update'], 10, 2);
-        add_action('wp_login', [$this, 'log_user_login'], 10, 2);
-        add_action('wp_logout', [$this, 'log_user_logout']);
-        add_action('password_reset', [$this, 'log_password_reset'], 10, 2);
-        add_action('retrieve_password', [$this, 'log_password_reset_request'], 10, 1);
-        add_action('after_password_reset', [$this, 'log_password_change'], 10, 2);
-        add_action('set_user_role', [$this, 'log_user_role_change'], 10, 3);
+        add_action('user_register', [$this, 'sdw_log_user_register']);
+        add_action('profile_update', [$this, 'sdw_log_profile_update'], 10, 2);
+        add_action('wp_login', [$this, 'sdw_log_user_login'], 10, 2);
+        add_action('wp_logout', [$this, 'sdw_log_user_logout']);
+        add_action('password_reset', [$this, 'sdw_log_password_reset'], 10, 2);
+        add_action('retrieve_password', [$this, 'sdw_log_password_reset_request'], 10, 1);
+        add_action('after_password_reset', [$this, 'sdw_log_password_change'], 10, 2);
+        add_action('set_user_role', [$this, 'sdw_log_user_role_change'], 10, 3);
 
         // User meta changes
-        add_action('update_user_meta', [$this, 'log_user_meta_update'], 10, 4);
-        add_action('added_user_meta', [$this, 'log_user_meta_add'], 10, 4);
-        add_action('deleted_user_meta', [$this, 'log_user_meta_delete'], 10, 4);
+        add_action('update_user_meta', [$this, 'sdw_log_user_meta_update'], 10, 4);
+        add_action('added_user_meta', [$this, 'sdw_log_user_meta_add'], 10, 4);
+        add_action('deleted_user_meta', [$this, 'sdw_log_user_meta_delete'], 10, 4);
 
         // Plugins and Themes
-        add_action('activated_plugin', [$this, 'log_plugin_activation'], 10, 2);
-        add_action('deactivated_plugin', [$this, 'log_plugin_deactivation'], 10, 2);
-        add_action('delete_plugin', [$this, 'log_plugin_delete'], 10, 1);
-        add_action('switch_theme', [$this, 'log_theme_switch'], 10, 3);
+        add_action('activated_plugin', [$this, 'sdw_log_plugin_activation'], 10, 2);
+        add_action('deactivated_plugin', [$this, 'sdw_log_plugin_deactivation'], 10, 2);
+        add_action('delete_plugin', [$this, 'sdw_log_plugin_delete'], 10, 1);
+        add_action('switch_theme', [$this, 'sdw_log_theme_switch'], 10, 3);
 
         // Store old option value
-        add_filter('pre_update_option', [$this, 'store_old_option_value'], 10, 2);
-        add_action('updated_option', [$this, 'log_option_update'], 10, 3);
+        add_filter('pre_update_option', [$this, 'sdw_store_old_option_value'], 10, 2);
+        add_action('updated_option', [$this, 'sdw_log_option_update'], 10, 3);
 
         // Comments
-        add_action('comment_post', [$this, 'log_comment_post'], 10, 3);
-        add_action('edit_comment', [$this, 'log_comment_edit'], 10, 2);
-        add_action('delete_comment', [$this, 'log_comment_delete'], 10, 2);
+        add_action('comment_post', [$this, 'sdw_log_comment_post'], 10, 3);
+        add_action('edit_comment', [$this, 'sdw_log_comment_edit'], 10, 2);
+        add_action('delete_comment', [$this, 'sdw_log_comment_delete'], 10, 2);
 
         // Comment status changes
-        add_action('transition_comment_status', [$this, 'log_comment_status_change'], 10, 3);
+        add_action('transition_comment_status', [$this, 'sdw_log_comment_status_change'], 10, 3);
 
         // Media
-        add_action('add_attachment', [$this, 'log_media_add']);
-        add_action('edit_attachment', [$this, 'log_media_edit'], 10, 2);
-        add_action('delete_attachment', [$this, 'log_media_delete'], 10, 1);
+        add_action('add_attachment', [$this, 'sdw_log_media_add']);
+        add_action('edit_attachment', [$this, 'sdw_log_media_edit'], 10, 2);
+        add_action('delete_attachment', [$this, 'sdw_log_media_delete'], 10, 1);
 
         // Featured image hooks
-        add_action('added_post_meta', [$this, 'log_featured_image_add'], 10, 4);
-        add_action('updated_post_meta', [$this, 'log_featured_image_update'], 10, 4);
-        add_action('deleted_post_meta', [$this, 'log_featured_image_delete'], 10, 4);
+        add_action('added_post_meta', [$this, 'sdw_log_featured_image_add'], 10, 4);
+        add_action('updated_post_meta', [$this, 'sdw_log_featured_image_update'], 10, 4);
+        add_action('deleted_post_meta', [$this, 'sdw_log_featured_image_delete'], 10, 4);
 
         // Taxonomy terms - ENHANCED with better hooks
-        add_action('created_term', [$this, 'log_term_created'], 10, 3);
-        add_action('edited_term', [$this, 'log_term_updated'], 10, 3);
-        add_action('edit_term', [$this, 'store_old_term_properties'], 5, 3);
-        add_action('delete_term', [$this, 'log_term_deleted'], 10, 4);
-        add_action('set_object_terms', [$this, 'log_object_terms_change'], 10, 6);
+        add_action('created_term', [$this, 'sdw_log_term_created'], 10, 3);
+        add_action('edited_term', [$this, 'sdw_log_term_updated'], 10, 3);
+        add_action('edit_term', [$this, 'sdw_store_old_term_properties'], 5, 3);
+        add_action('delete_term', [$this, 'sdw_log_term_deleted'], 10, 4);
+        add_action('set_object_terms', [$this, 'sdw_log_object_terms_change'], 10, 6);
 
         // Term meta changes - NEW hooks for term meta
-        add_action('updated_term_meta', [$this, 'log_term_meta_update'], 10, 4);
-        add_action('added_term_meta', [$this, 'log_term_meta_add'], 10, 4);
-        add_action('deleted_term_meta', [$this, 'log_term_meta_delete'], 10, 4);
+        add_action('updated_term_meta', [$this, 'sdw_log_term_meta_update'], 10, 4);
+        add_action('added_term_meta', [$this, 'sdw_log_term_meta_add'], 10, 4);
+        add_action('deleted_term_meta', [$this, 'sdw_log_term_meta_delete'], 10, 4);
 
         // Widgets
-        add_action('updated_option', [$this, 'log_widget_update'], 10, 3);
+        add_action('updated_option', [$this, 'sdw_log_widget_update'], 10, 3);
 
         // Import/Export Tools
-        add_action('import_start', [$this, 'log_import_start']);
-        add_action('import_end', [$this, 'log_import_end']);
-        add_action('export_wp', [$this, 'log_export_start']);
+        add_action('import_start', [$this, 'sdw_log_import_start']);
+        add_action('import_end', [$this, 'sdw_log_import_end']);
+        add_action('export_wp', [$this, 'sdw_log_export_start']);
 
         // Store old slug before update
-        add_filter('wp_insert_post_data', [$this, 'store_old_slug_data'], 5, 2);
+        add_filter('wp_insert_post_data', [$this, 'sdw_store_old_slug_data'], 5, 2);
 
         // Store old template data
-        add_filter('wp_insert_post_data', [$this, 'store_old_template_data'], 5, 2);
+        add_filter('wp_insert_post_data', [$this, 'sdw_store_old_template_data'], 5, 2);
 
         // ACF field saves
         if (function_exists('acf')) {
-            add_action('acf/save_post', [$this, 'log_acf_save'], 20);
-            // add_action('acf/update_field_group', [$this, 'log_acf_field_group_update'], 20, 1);
-            // add_action('acf/duplicate_field_group', [$this, 'log_acf_field_group_duplicate'], 10, 2);
-            // add_action('acf/delete_field_group', [$this, 'log_acf_field_group_delete'], 10, 1);
+            add_action('acf/save_post', [$this, 'sdw_log_acf_save'], 20);
         }
 
         // Admin menu
         add_action('admin_menu', ['Log_Manager', 'add_admin_menu']);
 
         // Bulk actions
-        add_action('handle_bulk_actions-edit-post', [$this, 'handle_bulk_action_post'], 10, 3);
-        add_action('handle_bulk_actions-edit-page', [$this, 'handle_bulk_action_post'], 10, 3);
-        add_action('handle_bulk_actions-edit-product', [$this, 'handle_bulk_action_post'], 10, 3);
+        add_action('handle_bulk_actions-edit-post', [$this, 'sdw_handle_bulk_action_post'], 10, 3);
+        add_action('handle_bulk_actions-edit-page', [$this, 'sdw_handle_bulk_action_post'], 10, 3);
+        add_action('handle_bulk_actions-edit-product', [$this, 'sdw_handle_bulk_action_post'], 10, 3);
 
         // Menu changes
-        add_action('wp_update_nav_menu', [$this, 'log_menu_update'], 10, 2);
-        add_action('wp_create_nav_menu', [$this, 'log_menu_created'], 10, 2);
-        add_action('wp_delete_nav_menu', [$this, 'log_menu_deleted'], 10, 1);
+        add_action('wp_update_nav_menu', [$this, 'sdw_log_menu_update'], 10, 2);
+        add_action('wp_create_nav_menu', [$this, 'sdw_log_menu_created'], 10, 2);
+        add_action('wp_delete_nav_menu', [$this, 'sdw_log_menu_deleted'], 10, 1);
 
         // Widget area updates
-        add_action('update_option_sidebars_widgets', [$this, 'log_sidebar_widgets_update'], 10, 2);
+        add_action('update_option_sidebars_widgets', [$this, 'sdw_log_sidebar_widgets_update'], 10, 2);
 
         // Customizer changes
-        add_action('customize_save_after', [$this, 'log_customizer_save']);
+        add_action('customize_save_after', [$this, 'sdw_log_customizer_save']);
 
         // Security events
-        add_action('wp_login_failed', [$this, 'log_login_failed'], 10, 1);
+        add_action('wp_login_failed', [$this, 'sdw_log_login_failed'], 10, 1);
 
         // Performance optimization: Skip during WP-CLI
         if (defined('WP_CLI') && WP_CLI) {
-            remove_action('save_post', [$this, 'log_post_save'], 20);
-            remove_action('updated_post_meta', [$this, 'log_post_meta_update'], 10);
+            remove_action('save_post', [$this, 'sdw_log_post_save'], 20);
+            remove_action('updated_post_meta', [$this, 'sdw_log_post_meta_update'], 10);
         }
 
         // ACF Field Group Tracking ONLY
         if (function_exists('acf')) {
             // Capture old field group data before save
-            add_action('save_post_acf-field-group', [$this, 'capture_old_acf_field_group'], 5, 2);
+            add_action('save_post_acf-field-group', [$this, 'sdw_capture_old_acf_field_group'], 5, 2);
 
             // Log field group updates, deletions, and duplications
-            add_action('acf/update_field_group', [$this, 'log_acf_field_group_update'], 10, 1);
-            add_action('acf/delete_field_group', [$this, 'log_acf_field_group_delete'], 10, 1);
-            add_action('acf/duplicate_field_group', [$this, 'log_acf_field_group_duplicate'], 10, 1);
+            add_action('acf/update_field_group', [$this, 'sdw_log_acf_field_group_update'], 10, 1);
+            add_action('acf/delete_field_group', [$this, 'sdw_log_acf_field_group_delete'], 10, 1);
+            add_action('acf/duplicate_field_group', [$this, 'sdw_log_acf_field_group_duplicate'], 10, 1);
 
             // Track individual field changes within field groups
-            add_action('save_post_acf-field', [$this, 'log_acf_field_changes'], 20, 3);
+            add_action('save_post_acf-field', [$this, 'sdw_log_acf_field_changes'], 20, 3);
         }
-
     }
 
-    public function check_ajax_request()
+    /**
+     * Check if the current request is an AJAX request
+     */
+    public function sdw_check_ajax_request()
     {
         if (defined('DOING_AJAX') && DOING_AJAX) {
             self::$is_ajax_request = true;
         }
     }
 
-    public function check_bulk_operation()
+    /**
+     * Check for bulk operations on posts
+     */
+    public function sdw_check_bulk_operation()
     {
         if (isset($_REQUEST['action']) || isset($_REQUEST['action2'])) {
             $action = !empty($_REQUEST['action']) && $_REQUEST['action'] != -1 ? $_REQUEST['action'] : $_REQUEST['action2'];
@@ -210,14 +217,18 @@ class Log_Manager_Hooks
 
                 if ($action === 'edit' && isset($_REQUEST['post'])) {
                     foreach ($_REQUEST['post'] as $post_id) {
-                        $this->store_post_data_for_bulk($post_id);
+                        $this->sdw_store_post_data_for_bulk($post_id);
                     }
                 }
             }
         }
     }
 
-    private function store_post_data_for_bulk($post_id)
+    /**
+     * Store post data for bulk operations
+     * @param int $post_id The post ID
+     */
+    private function sdw_store_post_data_for_bulk($post_id)
     {
         if (!self::$stored_bulk_data) {
             $post = get_post($post_id);
@@ -239,7 +250,13 @@ class Log_Manager_Hooks
         }
     }
 
-    public function store_old_template_data($data, $postarr)
+    /**
+     * Store old template data before post update
+     * @param array $data Post data
+     * @param array $postarr Post array
+     * @return array Modified post data
+     */
+    public function sdw_store_old_template_data($data, $postarr)
     {
         if (!empty($postarr['ID'])) {
             $post_id = $postarr['ID'];
@@ -252,7 +269,10 @@ class Log_Manager_Hooks
         return $data;
     }
 
-    public function store_old_post_data_ajax()
+    /**
+     * Store old post data for AJAX quick edit
+     */
+    public function sdw_store_old_post_data_ajax()
     {
         if (isset($_POST['post_ID'])) {
             $post_id = intval($_POST['post_ID']);
@@ -281,7 +301,10 @@ class Log_Manager_Hooks
         }
     }
 
-    public function store_old_taxonomy_data_ajax()
+    /**
+     * Store old taxonomy data for AJAX operations
+     */
+    public function sdw_store_old_taxonomy_data_ajax()
     {
         if (isset($_POST['tag_ID'])) {
             $term_id = intval($_POST['tag_ID']);
@@ -314,7 +337,11 @@ class Log_Manager_Hooks
         }
     }
 
-    public function store_old_user_data_for_update($user_id)
+    /**
+     * Store old user data before profile update
+     * @param int $user_id The user ID
+     */
+    public function sdw_store_old_user_data_for_update($user_id)
     {
         $user = get_user_by('id', $user_id);
         if ($user) {
@@ -330,7 +357,11 @@ class Log_Manager_Hooks
         }
     }
 
-    public function store_old_acf_data($post_id)
+    /**
+     * Store old ACF field data before save
+     * @param mixed $post_id The post ID
+     */
+    public function sdw_store_old_acf_data($post_id)
     {
         if ($post_id === 'acf-field-group' || $post_id === 'options') {
             return;
@@ -351,7 +382,11 @@ class Log_Manager_Hooks
         }
     }
 
-    public function store_old_acf_field_group_data($field_group)
+    /**
+     * Store old ACF field group data
+     * @param array $field_group The field group data
+     */
+    public function sdw_store_old_acf_field_group_data($field_group)
     {
         if (!isset(self::$old_acf_data['field_groups'])) {
             self::$old_acf_data['field_groups'] = [];
@@ -361,7 +396,13 @@ class Log_Manager_Hooks
         self::$old_acf_data['field_groups'][$field_group['key']] = $field_group;
     }
 
-    public function store_old_slug_data($data, $postarr)
+    /**
+     * Store old slug data before post update
+     * @param array $data Post data
+     * @param array $postarr Post array
+     * @return array Modified post data
+     */
+    public function sdw_store_old_slug_data($data, $postarr)
     {
         if (!empty($postarr['ID'])) {
             $post_id = $postarr['ID'];
@@ -376,7 +417,13 @@ class Log_Manager_Hooks
         return $data;
     }
 
-    public function store_old_post_data($data, $postarr)
+    /**
+     * Store old post data before update
+     * @param array $data Post data
+     * @param array $postarr Post array
+     * @return array Modified post data
+     */
+    public function sdw_store_old_post_data($data, $postarr)
     {
         if (!empty($postarr['ID'])) {
             $post_id = $postarr['ID'];
@@ -405,7 +452,12 @@ class Log_Manager_Hooks
         return $data;
     }
 
-    public function store_old_meta_data($post_id, $post)
+    /**
+     * Store old meta data before post save
+     * @param int $post_id The post ID
+     * @param WP_Post $post The post object
+     */
+    public function sdw_store_old_meta_data($post_id, $post)
     {
         if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
@@ -421,7 +473,13 @@ class Log_Manager_Hooks
         }
     }
 
-    public function store_old_option_value($new_value, $option_name)
+    /**
+     * Store old option value before update
+     * @param mixed $new_value The new option value
+     * @param string $option_name The option name
+     * @return mixed The new option value
+     */
+    public function sdw_store_old_option_value($new_value, $option_name)
     {
         if (!isset(self::$old_option_values[$option_name])) {
             self::$old_option_values[$option_name] = get_option($option_name);
@@ -429,7 +487,11 @@ class Log_Manager_Hooks
         return $new_value;
     }
 
-    public function store_old_taxonomy_data($post_id)
+    /**
+     * Store old taxonomy data before post update
+     * @param int $post_id The post ID
+     */
+    public function sdw_store_old_taxonomy_data($post_id)
     {
         $post_type = get_post_type($post_id);
         $taxonomies = get_object_taxonomies($post_type, 'names');
@@ -440,7 +502,10 @@ class Log_Manager_Hooks
         }
     }
 
-    public function store_old_user_data()
+    /**
+     * Store old user data before edit
+     */
+    public function sdw_store_old_user_data()
     {
         if (isset($_GET['user_id'])) {
             $user_id = intval($_GET['user_id']);
@@ -473,7 +538,10 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_quick_edit_save()
+    /**
+     * Log quick edit save for posts
+     */
+    public function sdw_log_quick_edit_save()
     {
         if (!isset($_POST['post_ID']))
             return;
@@ -572,8 +640,8 @@ class Log_Manager_Hooks
         if (isset($_POST['page_template']) && isset(self::$old_post_data[$post_id]['template'])) {
             $new_template = sanitize_text_field($_POST['page_template']);
             if (self::$old_post_data[$post_id]['template'] !== $new_template) {
-                $old_template_name = $this->get_template_name(self::$old_post_data[$post_id]['template']);
-                $new_template_name = $this->get_template_name($new_template);
+                $old_template_name = $this->sdw_get_template_name(self::$old_post_data[$post_id]['template']);
+                $new_template_name = $this->sdw_get_template_name($new_template);
                 $details['page_template'] = [
                     'old' => $old_template_name,
                     'new' => $new_template_name
@@ -586,8 +654,8 @@ class Log_Manager_Hooks
             $new_status = sanitize_text_field($_POST['_status']);
             if (self::$old_post_data[$post_id]['status'] !== $new_status) {
                 $details['status'] = [
-                    'old' => $this->get_post_status_label(self::$old_post_data[$post_id]['status']),
-                    'new' => $this->get_post_status_label($new_status)
+                    'old' => $this->sdw_get_post_status_label(self::$old_post_data[$post_id]['status']),
+                    'new' => $this->sdw_get_post_status_label($new_status)
                 ];
                 $has_changes = true;
             }
@@ -604,8 +672,8 @@ class Log_Manager_Hooks
                         self::$old_taxonomy_data[$post_id][$taxonomy] : [];
 
                     if (is_array($new_terms)) {
-                        $old_term_names = $this->get_term_names_from_ids($old_terms, $taxonomy);
-                        $new_term_names = $this->get_term_names_from_input($new_terms, $taxonomy);
+                        $old_term_names = $this->sdw_get_term_names_from_ids($old_terms, $taxonomy);
+                        $new_term_names = $this->sdw_get_term_names_from_input($new_terms, $taxonomy);
 
                         sort($old_term_names);
                         sort($new_term_names);
@@ -639,10 +707,10 @@ class Log_Manager_Hooks
             $view_url = get_permalink($post_id);
 
             if ($edit_url) {
-                $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+                $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
             }
             if ($view_url) {
-                $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+                $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
             }
 
             Log_Manager::log(
@@ -659,8 +727,13 @@ class Log_Manager_Hooks
         unset(self::$old_taxonomy_data[$post_id]);
     }
 
-
-    public function log_post_save($post_id, $post, $update)
+    /**
+     * Log post save (create or update)
+     * @param int $post_id The post ID
+     * @param WP_Post $post The post object
+     * @param bool $update Whether this is an update
+     */
+    public function sdw_log_post_save($post_id, $post, $update)
     {
         if (in_array($post_id, self::$processed_posts)) {
             return;
@@ -680,9 +753,9 @@ class Log_Manager_Hooks
             return;
         }
 
-        remove_action('updated_post_meta', [$this, 'log_post_meta_update'], 10);
-        remove_action('added_post_meta', [$this, 'log_post_meta_add'], 10);
-        remove_action('deleted_post_meta', [$this, 'log_post_meta_delete'], 10);
+        remove_action('updated_post_meta', [$this, 'sdw_log_post_meta_update'], 10);
+        remove_action('added_post_meta', [$this, 'sdw_log_post_meta_add'], 10);
+        remove_action('deleted_post_meta', [$this, 'sdw_log_post_meta_delete'], 10);
 
         $action = $update ? 'post_updated' : 'post_created';
         $severity = 'info';
@@ -693,11 +766,11 @@ class Log_Manager_Hooks
         $view_url = get_permalink($post_id);
 
         if ($edit_url) {
-            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
         }
 
         if ($view_url) {
-            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
         if ($update && isset(self::$old_post_data[$post_id])) {
@@ -726,8 +799,8 @@ class Log_Manager_Hooks
                     $diff = $new_len - $old_len;
 
                     // Get detailed content changes
-                    $content_changes = $this->get_content_diff($old_data['content'], $post->post_content);
-                    $word_changes = $this->get_word_changes($old_content, $new_content);
+                    $content_changes = $this->sdw_get_content_diff($old_data['content'], $post->post_content);
+                    $word_changes = $this->sdw_get_word_changes($old_content, $new_content);
 
                     $details['content'] = [
                         'change' => 'Content updated',
@@ -745,12 +818,7 @@ class Log_Manager_Hooks
                         $details['content']['word_changes'] = $word_changes;
                     }
 
-                    if (isset($change_location)) {
-                        $details['content']['change_location'] = $change_location;
-                    }
-
                     $has_changes = true;
-
                 }
             }
 
@@ -766,8 +834,8 @@ class Log_Manager_Hooks
             // Check status changes
             if (isset($old_data['status']) && $old_data['status'] !== $post->post_status) {
                 $details['status'] = [
-                    'old' => $this->get_post_status_label($old_data['status']),
-                    'new' => $this->get_post_status_label($post->post_status)
+                    'old' => $this->sdw_get_post_status_label($old_data['status']),
+                    'new' => $this->sdw_get_post_status_label($post->post_status)
                 ];
                 $has_changes = true;
             }
@@ -858,8 +926,8 @@ class Log_Manager_Hooks
             if (isset($old_data['template'])) {
                 $new_template = get_page_template_slug($post_id);
                 if ($old_data['template'] !== $new_template) {
-                    $old_template_name = $this->get_template_name($old_data['template']);
-                    $new_template_name = $this->get_template_name($new_template);
+                    $old_template_name = $this->sdw_get_template_name($old_data['template']);
+                    $new_template_name = $this->sdw_get_template_name($new_template);
                     $details['page_template'] = [
                         'old' => $old_template_name,
                         'new' => $new_template_name
@@ -895,7 +963,7 @@ class Log_Manager_Hooks
 
         } else {
             $details['action'] = 'New post created';
-            $details['status'] = $this->get_post_status_label($post->post_status);
+            $details['status'] = $this->sdw_get_post_status_label($post->post_status);
             $details['post_type'] = $post->post_type;
             $details['author'] = get_user_by('id', $post->post_author)->display_name ?? 'Unknown';
         }
@@ -914,13 +982,17 @@ class Log_Manager_Hooks
             $severity
         );
 
-        add_action('updated_post_meta', [$this, 'log_post_meta_update'], 10, 4);
-        add_action('added_post_meta', [$this, 'log_post_meta_add'], 10, 4);
-        add_action('deleted_post_meta', [$this, 'log_post_meta_delete'], 10, 4);
+        add_action('updated_post_meta', [$this, 'sdw_log_post_meta_update'], 10, 4);
+        add_action('added_post_meta', [$this, 'sdw_log_post_meta_add'], 10, 4);
+        add_action('deleted_post_meta', [$this, 'sdw_log_post_meta_delete'], 10, 4);
     }
 
-
-    public function log_post_revision($revision_id, $original_id)
+    /**
+     * Log post revision creation
+     * @param int $revision_id The revision ID
+     * @param int $original_id The original post ID
+     */
+    public function sdw_log_post_revision($revision_id, $original_id)
     {
         if (in_array($revision_id, self::$processed_posts)) {
             return;
@@ -939,17 +1011,17 @@ class Log_Manager_Hooks
         $details = [
             'revision' => "Revision #{$revision_id} created",
             'parent_post' => $parent_post->post_title,
-            'view_revisions' => "<a href='" . esc_url($revisions_url) . "' target='_blank'>📚 View post revision</a>",
+            'view_revisions' => "<a href='" . esc_url($revisions_url) . "' target='_blank'> View post revision</a>",
         ];
 
         $edit_url = get_edit_post_link($parent_post->ID);
         if ($edit_url) {
-            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
         }
 
         $view_url = get_permalink($parent_post->ID);
         if ($view_url) {
-            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
         Log_Manager::log(
@@ -962,7 +1034,11 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_post_delete($post_id)
+    /**
+     * Log post deletion
+     * @param int $post_id The post ID
+     */
+    public function sdw_log_post_delete($post_id)
     {
         if (in_array($post_id, self::$processed_posts)) {
             return;
@@ -977,11 +1053,11 @@ class Log_Manager_Hooks
         $view_url = get_permalink($post_id);
         $details = [
             'post_type' => $post->post_type,
-            'status' => $this->get_post_status_label($post->post_status)
+            'status' => $this->sdw_get_post_status_label($post->post_status)
         ];
 
         if ($view_url) {
-            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
         Log_Manager::log(
@@ -994,7 +1070,11 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_post_trash($post_id)
+    /**
+     * Log post trashing
+     * @param int $post_id The post ID
+     */
+    public function sdw_log_post_trash($post_id)
     {
         if (in_array($post_id, self::$processed_posts)) {
             return;
@@ -1009,14 +1089,14 @@ class Log_Manager_Hooks
         $edit_url = get_edit_post_link($post_id);
         $view_url = get_permalink($post_id);
         $details = [
-            'status' => $this->get_post_status_label($post->post_status)
+            'status' => $this->sdw_get_post_status_label($post->post_status)
         ];
 
         if ($edit_url) {
-            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
         }
         if ($view_url) {
-            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
         Log_Manager::log(
@@ -1029,7 +1109,12 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_post_untrash($post_id, $previous_status)
+    /**
+     * Log post restoration from trash
+     * @param int $post_id The post ID
+     * @param string $previous_status The previous post status
+     */
+    public function sdw_log_post_untrash($post_id, $previous_status)
     {
         if (in_array($post_id, self::$processed_posts)) {
             return;
@@ -1044,15 +1129,15 @@ class Log_Manager_Hooks
         $edit_url = get_edit_post_link($post_id);
         $view_url = get_permalink($post_id);
         $details = [
-            'status' => $this->get_post_status_label($post->post_status),
-            'previous_status' => $this->get_post_status_label($previous_status)
+            'status' => $this->sdw_get_post_status_label($post->post_status),
+            'previous_status' => $this->sdw_get_post_status_label($previous_status)
         ];
 
         if ($edit_url) {
-            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
         }
         if ($view_url) {
-            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
         Log_Manager::log(
@@ -1065,7 +1150,14 @@ class Log_Manager_Hooks
         );
     }
 
-    public function handle_bulk_action_post($redirect_to, $doaction, $post_ids)
+    /**
+     * Handle bulk actions for posts
+     * @param string $redirect_to The redirect URL
+     * @param string $doaction The action to perform
+     * @param array $post_ids Array of post IDs
+     * @return string Modified redirect URL
+     */
+    public function sdw_handle_bulk_action_post($redirect_to, $doaction, $post_ids)
     {
         if (empty($post_ids))
             return $redirect_to;
@@ -1073,40 +1165,44 @@ class Log_Manager_Hooks
         switch ($doaction) {
             case 'trash':
                 foreach ($post_ids as $post_id) {
-                    $this->log_bulk_trash($post_id);
+                    $this->sdw_log_bulk_trash($post_id);
                 }
                 break;
 
             case 'untrash':
                 foreach ($post_ids as $post_id) {
-                    $this->log_bulk_untrash($post_id);
+                    $this->sdw_log_bulk_untrash($post_id);
                 }
                 break;
 
             case 'delete':
                 foreach ($post_ids as $post_id) {
-                    $this->log_bulk_delete($post_id);
+                    $this->sdw_log_bulk_delete($post_id);
                 }
                 break;
 
             case 'edit':
-                $this->log_bulk_edit($post_ids);
+                $this->sdw_log_bulk_edit($post_ids);
                 break;
         }
 
         return $redirect_to;
     }
 
-    private function log_bulk_trash($post_id)
+    /**
+     * Log bulk trashing of posts
+     * @param int $post_id The post ID
+     */
+    private function sdw_log_bulk_trash($post_id)
     {
         $post = get_post($post_id);
         if (!$post)
             return;
 
         $details = [
-            'status' => $this->get_post_status_label($post->post_status),
+            'status' => $this->sdw_get_post_status_label($post->post_status),
             'action' => 'Bulk action: Trash',
-            'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'>👁️ View post</a>" : ''
+            'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'> View post</a>" : ''
         ];
 
         Log_Manager::log(
@@ -1119,16 +1215,20 @@ class Log_Manager_Hooks
         );
     }
 
-    private function log_bulk_untrash($post_id)
+    /**
+     * Log bulk restoration of posts
+     * @param int $post_id The post ID
+     */
+    private function sdw_log_bulk_untrash($post_id)
     {
         $post = get_post($post_id);
         if (!$post)
             return;
 
         $details = [
-            'status' => $this->get_post_status_label($post->post_status),
+            'status' => $this->sdw_get_post_status_label($post->post_status),
             'action' => 'Bulk action: Restore',
-            'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'>👁️ View post</a>" : ''
+            'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'> View post</a>" : ''
         ];
 
         Log_Manager::log(
@@ -1141,7 +1241,11 @@ class Log_Manager_Hooks
         );
     }
 
-    private function log_bulk_delete($post_id)
+    /**
+     * Log bulk deletion of posts
+     * @param int $post_id The post ID
+     */
+    private function sdw_log_bulk_delete($post_id)
     {
         $post = get_post($post_id);
         if (!$post)
@@ -1149,9 +1253,9 @@ class Log_Manager_Hooks
 
         $details = [
             'post_type' => $post->post_type,
-            'status' => $this->get_post_status_label($post->post_status),
+            'status' => $this->sdw_get_post_status_label($post->post_status),
             'action' => 'Bulk action: Delete',
-            'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'>👁️ View post</a>" : ''
+            'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'> View post</a>" : ''
         ];
 
         Log_Manager::log(
@@ -1164,7 +1268,11 @@ class Log_Manager_Hooks
         );
     }
 
-    private function log_bulk_edit($post_ids)
+    /**
+     * Log bulk editing of posts
+     * @param array $post_ids Array of post IDs
+     */
+    private function sdw_log_bulk_edit($post_ids)
     {
         if (empty($post_ids))
             return;
@@ -1174,7 +1282,7 @@ class Log_Manager_Hooks
         if (isset($_REQUEST['_status']) && $_REQUEST['_status'] != -1) {
             $new_status = sanitize_text_field($_REQUEST['_status']);
             $changes['status'] = [
-                'new' => $this->get_post_status_label($new_status)
+                'new' => $this->sdw_get_post_status_label($new_status)
             ];
         }
 
@@ -1258,7 +1366,7 @@ class Log_Manager_Hooks
                 if (!empty($term_names)) {
                     $taxonomy_obj = get_taxonomy($taxonomy);
                     $tax_name = $taxonomy_obj->labels->name ?? $taxonomy;
-                    $changes[$tax_name] = [
+                    $changes[$taxonomy] = [
                         'action' => 'Remove terms',
                         'terms' => implode(', ', $term_names)
                     ];
@@ -1281,7 +1389,7 @@ class Log_Manager_Hooks
 
             $view_url = get_permalink($post_id);
             if ($view_url) {
-                $post_details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+                $post_details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
             }
 
             Log_Manager::log(
@@ -1295,15 +1403,12 @@ class Log_Manager_Hooks
         }
     }
 
-    // private function get_template_name($template) {
-    //     if (empty($template) || $template === 'default') {
-    //         return 'Default Template';
-    //     }
-
-    //     $templates = wp_get_theme()->get_page_templates();
-    //     return isset($templates[$template]) ? $templates[$template] : $template;
-    // }
-    private function get_template_name($template)
+    /**
+     * Get template name from template slug
+     * @param string $template The template slug
+     * @return string The template display name
+     */
+    private function sdw_get_template_name($template)
     {
         if (empty($template) || $template === 'default') {
             return 'Default Template';
@@ -1313,7 +1418,12 @@ class Log_Manager_Hooks
         return isset($templates[$template]) ? $templates[$template] : $template;
     }
 
-    private function get_post_status_label($status)
+    /**
+     * Get post status label
+     * @param string $status The post status
+     * @return string The post status label
+     */
+    private function sdw_get_post_status_label($status)
     {
         $labels = [
             'publish' => 'Published',
@@ -1329,7 +1439,16 @@ class Log_Manager_Hooks
         return $labels[$status] ?? ucfirst($status);
     }
 
-    public function log_object_terms_change($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids)
+    /**
+     * Log taxonomy term changes for objects
+     * @param int $object_id The object ID
+     * @param array $terms Array of term IDs
+     * @param array $tt_ids Array of term taxonomy IDs
+     * @param string $taxonomy The taxonomy name
+     * @param bool $append Whether to append terms
+     * @param array $old_tt_ids Old term taxonomy IDs
+     */
+    public function sdw_log_object_terms_change($object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids)
     {
         if (self::$is_ajax_request || defined('DOING_AJAX')) {
             return;
@@ -1407,11 +1526,11 @@ class Log_Manager_Hooks
         }
 
         if ($edit_url) {
-            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
         }
 
         if ($view_url) {
-            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
         Log_Manager::log(
@@ -1424,8 +1543,13 @@ class Log_Manager_Hooks
         );
     }
 
-
-    public function log_term_updated($term_id, $tt_id, $taxonomy)
+    /**
+     * Log term update
+     * @param int $term_id The term ID
+     * @param int $tt_id The term taxonomy ID
+     * @param string $taxonomy The taxonomy name
+     */
+    public function sdw_log_term_updated($term_id, $tt_id, $taxonomy)
     {
         if (in_array($term_id, self::$processed_terms)) {
             return;
@@ -1506,13 +1630,13 @@ class Log_Manager_Hooks
         // Add term edit link
         $edit_url = get_edit_term_link($term_id, $taxonomy);
         if ($edit_url) {
-            $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit {$taxonomy_name}</a>";
+            $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit {$taxonomy_name}</a>";
         }
 
         // Add view link
         $term_url = get_term_link($term_id, $taxonomy);
         if (!is_wp_error($term_url) && $term_url) {
-            $details['view_term'] = "<a href='" . esc_url($term_url) . "' target='_blank'>👁️ View {$taxonomy_name}</a>";
+            $details['view_term'] = "<a href='" . esc_url($term_url) . "' target='_blank'> View {$taxonomy_name}</a>";
         }
 
         if ($has_changes) {
@@ -1532,11 +1656,13 @@ class Log_Manager_Hooks
         }
     }
 
-
     /**
-     * Store old term properties before it is edited (for full/non-AJAX term edits)
+     * Store old term properties before edit
+     * @param int $term_id The term ID
+     * @param int $tt_id The term taxonomy ID
+     * @param string $taxonomy The taxonomy name
      */
-    public function store_old_term_properties($term_id, $tt_id, $taxonomy)
+    public function sdw_store_old_term_properties($term_id, $tt_id, $taxonomy)
     {
         $term = get_term($term_id, $taxonomy);
         if ($term && !is_wp_error($term)) {
@@ -1551,7 +1677,7 @@ class Log_Manager_Hooks
                 'parent' => $term->parent
             ];
 
-            // Store all term meta (optional but useful if you later want to log term meta changes here)
+            // Store all term meta
             $all_term_meta = get_term_meta($term_id);
             if ($all_term_meta) {
                 self::$old_taxonomy_data[$taxonomy][$term_id]['meta'] = [];
@@ -1564,8 +1690,13 @@ class Log_Manager_Hooks
         }
     }
 
-
-    public function log_term_created($term_id, $tt_id, $taxonomy)
+    /**
+     * Log term creation
+     * @param int $term_id The term ID
+     * @param int $tt_id The term taxonomy ID
+     * @param string $taxonomy The taxonomy name
+     */
+    public function sdw_log_term_created($term_id, $tt_id, $taxonomy)
     {
         if (in_array($term_id, self::$processed_terms)) {
             return;
@@ -1592,7 +1723,7 @@ class Log_Manager_Hooks
             ];
 
             if ($edit_url) {
-                $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit term</a>";
+                $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit term</a>";
             }
 
             Log_Manager::log(
@@ -1606,7 +1737,14 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_term_deleted($term_id, $tt_id, $taxonomy, $deleted_term)
+    /**
+     * Log term deletion
+     * @param int $term_id The term ID
+     * @param int $tt_id The term taxonomy ID
+     * @param string $taxonomy The taxonomy name
+     * @param WP_Term $deleted_term The deleted term object
+     */
+    public function sdw_log_term_deleted($term_id, $tt_id, $taxonomy, $deleted_term)
     {
         if (in_array($term_id, self::$processed_terms)) {
             return;
@@ -1639,9 +1777,13 @@ class Log_Manager_Hooks
     }
 
     /**
-     * FIXED: Enhanced term meta update logging
+     * Log term meta update
+     * @param int $meta_id The meta ID
+     * @param int $term_id The term ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
      */
-    public function log_term_meta_update($meta_id, $term_id, $meta_key, $meta_value)
+    public function sdw_log_term_meta_update($meta_id, $term_id, $meta_key, $meta_value)
     {
         if (strpos($meta_key, '_') === 0)
             return;
@@ -1652,7 +1794,7 @@ class Log_Manager_Hooks
 
         $old_value = get_term_meta($term_id, $meta_key, true);
 
-        if ($this->values_differ($old_value, $meta_value)) {
+        if ($this->sdw_values_differ($old_value, $meta_value)) {
             $taxonomy_obj = get_taxonomy($term->taxonomy);
             $tax_name = $taxonomy_obj->labels->singular_name ?? $term->taxonomy;
 
@@ -1661,12 +1803,12 @@ class Log_Manager_Hooks
             $details = [
                 'taxonomy' => $tax_name,
                 'field' => $meta_key,
-                'old_value' => $this->format_field_value($old_value),
-                'new_value' => $this->format_field_value($meta_value)
+                'old_value' => $this->sdw_format_field_value($old_value),
+                'new_value' => $this->sdw_format_field_value($meta_value)
             ];
 
             if ($edit_url) {
-                $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit {$tax_name}</a>";
+                $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit {$tax_name}</a>";
             }
 
             Log_Manager::log(
@@ -1681,9 +1823,13 @@ class Log_Manager_Hooks
     }
 
     /**
-     * FIXED: Enhanced term meta addition logging
+     * Log term meta addition
+     * @param int $meta_id The meta ID
+     * @param int $term_id The term ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
      */
-    public function log_term_meta_add($meta_id, $term_id, $meta_key, $meta_value)
+    public function sdw_log_term_meta_add($meta_id, $term_id, $meta_key, $meta_value)
     {
         if (strpos($meta_key, '_') === 0)
             return;
@@ -1700,11 +1846,11 @@ class Log_Manager_Hooks
         $details = [
             'taxonomy' => $tax_name,
             'field' => $meta_key,
-            'value' => $this->format_field_value($meta_value)
+            'value' => $this->sdw_format_field_value($meta_value)
         ];
 
         if ($edit_url) {
-            $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit {$tax_name}</a>";
+            $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit {$tax_name}</a>";
         }
 
         Log_Manager::log(
@@ -1718,9 +1864,13 @@ class Log_Manager_Hooks
     }
 
     /**
-     * FIXED: Enhanced term meta deletion logging
+     * Log term meta deletion
+     * @param array $meta_ids Array of meta IDs
+     * @param int $term_id The term ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
      */
-    public function log_term_meta_delete($meta_ids, $term_id, $meta_key, $meta_value)
+    public function sdw_log_term_meta_delete($meta_ids, $term_id, $meta_key, $meta_value)
     {
         if (strpos($meta_key, '_') === 0)
             return;
@@ -1737,11 +1887,11 @@ class Log_Manager_Hooks
         $details = [
             'taxonomy' => $tax_name,
             'field' => $meta_key,
-            'value' => $this->format_field_value($meta_value)
+            'value' => $this->sdw_format_field_value($meta_value)
         ];
 
         if ($edit_url) {
-            $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit {$tax_name}</a>";
+            $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit {$tax_name}</a>";
         }
 
         Log_Manager::log(
@@ -1754,14 +1904,19 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_profile_update($user_id, $old_user_data)
+    /**
+     * Log user profile update
+     * @param int $user_id The user ID
+     * @param WP_User $old_user_data The old user data
+     */
+    public function sdw_log_profile_update($user_id, $old_user_data)
     {
         $user = get_user_by('id', $user_id);
         $new_user_data = get_userdata($user_id);
         $changes = [];
 
         $profile_url = get_author_posts_url($user_id);
-        $changes['visit_user'] = $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : '';
+        $changes['visit_user'] = $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : '';
 
         if ($old_user_data->user_email !== $new_user_data->user_email) {
             $changes['email'] = [
@@ -1817,8 +1972,8 @@ class Log_Manager_Hooks
         $new_roles = $new_user_data->roles;
 
         if ($old_roles != $new_roles) {
-            $old_role_labels = array_map([$this, 'get_role_label'], $old_roles);
-            $new_role_labels = array_map([$this, 'get_role_label'], $new_roles);
+            $old_role_labels = array_map([$this, 'sdw_get_role_label'], $old_roles);
+            $new_role_labels = array_map([$this, 'sdw_get_role_label'], $new_roles);
             $changes['role'] = [
                 'old' => implode(', ', $old_role_labels),
                 'new' => implode(', ', $new_role_labels)
@@ -1841,15 +1996,19 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_user_register($user_id)
+    /**
+     * Log user registration
+     * @param int $user_id The user ID
+     */
+    public function sdw_log_user_register($user_id)
     {
         $user = get_user_by('id', $user_id);
 
         $profile_url = get_author_posts_url($user_id);
         $details = [
             'email' => $user->user_email,
-            'role' => $this->get_role_label($user->roles[0] ?? 'subscriber'),
-            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+            'role' => $this->sdw_get_role_label($user->roles[0] ?? 'subscriber'),
+            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
         Log_Manager::log(
@@ -1862,14 +2021,19 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_password_reset($user, $new_pass)
+    /**
+     * Log password reset
+     * @param WP_User $user The user object
+     * @param string $new_pass The new password
+     */
+    public function sdw_log_password_reset($user, $new_pass)
     {
         $profile_url = get_author_posts_url($user->ID);
         $details = [
             'action' => 'Password reset via email',
             'user' => $user->user_login,
             'note' => 'Password changed via reset link',
-            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
         Log_Manager::log(
@@ -1882,14 +2046,19 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_password_change($user, $new_pass)
+    /**
+     * Log password change
+     * @param WP_User $user The user object
+     * @param string $new_pass The new password
+     */
+    public function sdw_log_password_change($user, $new_pass)
     {
         $profile_url = get_author_posts_url($user->ID);
         $details = [
             'action' => 'Password changed',
             'user' => $user->user_login,
             'note' => 'Password updated manually',
-            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
         Log_Manager::log(
@@ -1902,15 +2071,21 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_user_role_change($user_id, $new_role, $old_roles)
+    /**
+     * Log user role change
+     * @param int $user_id The user ID
+     * @param string $new_role The new role
+     * @param array $old_roles The old roles
+     */
+    public function sdw_log_user_role_change($user_id, $new_role, $old_roles)
     {
         $user = get_user_by('id', $user_id);
         if ($user) {
             $profile_url = get_author_posts_url($user_id);
             $details = [
-                'old_roles' => implode(', ', array_map([$this, 'get_role_label'], $old_roles)),
-                'new_role' => $this->get_role_label($new_role),
-                'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+                'old_roles' => implode(', ', array_map([$this, 'sdw_get_role_label'], $old_roles)),
+                'new_role' => $this->sdw_get_role_label($new_role),
+                'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
             ];
 
             Log_Manager::log(
@@ -1924,7 +2099,11 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_password_reset_request($user_login)
+    /**
+     * Log password reset request
+     * @param string $user_login The username
+     */
+    public function sdw_log_password_reset_request($user_login)
     {
         $user = get_user_by('login', $user_login) ?: get_user_by('email', $user_login);
         if ($user) {
@@ -1933,7 +2112,7 @@ class Log_Manager_Hooks
                 'action' => 'Password reset requested',
                 'user' => $user->user_login,
                 'ip' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
-                'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+                'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
             ];
 
             Log_Manager::log(
@@ -1947,7 +2126,12 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_user_login($user_login, $user)
+    /**
+     * Log user login
+     * @param string $user_login The username
+     * @param WP_User $user The user object
+     */
+    public function sdw_log_user_login($user_login, $user)
     {
         $last_login = get_user_meta($user->ID, 'last_login', true);
         $current_time = current_time('mysql');
@@ -1955,9 +2139,9 @@ class Log_Manager_Hooks
 
         $profile_url = get_author_posts_url($user->ID);
         $details = [
-            'role' => $this->get_role_label($user->roles[0] ?? 'none'),
+            'role' => $this->sdw_get_role_label($user->roles[0] ?? 'none'),
             'last_login' => $last_login ? human_time_diff(strtotime($last_login)) . ' ago' : 'First login',
-            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
         if (in_array('administrator', $user->roles)) {
@@ -1974,7 +2158,10 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_user_logout()
+    /**
+     * Log user logout
+     */
+    public function sdw_log_user_logout()
     {
         $user = wp_get_current_user();
         if ($user->ID) {
@@ -1986,14 +2173,21 @@ class Log_Manager_Hooks
                 $user->user_login,
                 [
                     'session_ended' => 'User logged out',
-                    'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+                    'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
                 ],
                 'info'
             );
         }
     }
 
-    public function log_user_meta_update($meta_id, $user_id, $meta_key, $meta_value)
+    /**
+     * Log user meta update
+     * @param int $meta_id The meta ID
+     * @param int $user_id The user ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
+     */
+    public function sdw_log_user_meta_update($meta_id, $user_id, $meta_key, $meta_value)
     {
         if (strpos($meta_key, '_') === 0)
             return;
@@ -2004,13 +2198,13 @@ class Log_Manager_Hooks
 
         $old_value = get_user_meta($user_id, $meta_key, true);
 
-        if ($this->values_differ($old_value, $meta_value)) {
+        if ($this->sdw_values_differ($old_value, $meta_value)) {
             $profile_url = get_author_posts_url($user_id);
             $details = [
                 'field' => $meta_key,
-                'old' => $this->format_field_value($old_value),
-                'new' => $this->format_field_value($meta_value),
-                'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+                'old' => $this->sdw_format_field_value($old_value),
+                'new' => $this->sdw_format_field_value($meta_value),
+                'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
             ];
 
             Log_Manager::log(
@@ -2024,7 +2218,14 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_user_meta_add($meta_id, $user_id, $meta_key, $meta_value)
+    /**
+     * Log user meta addition
+     * @param int $meta_id The meta ID
+     * @param int $user_id The user ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
+     */
+    public function sdw_log_user_meta_add($meta_id, $user_id, $meta_key, $meta_value)
     {
         if (strpos($meta_key, '_') === 0)
             return;
@@ -2036,8 +2237,8 @@ class Log_Manager_Hooks
         $profile_url = get_author_posts_url($user_id);
         $details = [
             'field' => $meta_key,
-            'value' => $this->format_field_value($meta_value),
-            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+            'value' => $this->sdw_format_field_value($meta_value),
+            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
         Log_Manager::log(
@@ -2050,7 +2251,14 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_user_meta_delete($meta_ids, $user_id, $meta_key, $meta_value)
+    /**
+     * Log user meta deletion
+     * @param array $meta_ids Array of meta IDs
+     * @param int $user_id The user ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
+     */
+    public function sdw_log_user_meta_delete($meta_ids, $user_id, $meta_key, $meta_value)
     {
         if (strpos($meta_key, '_') === 0)
             return;
@@ -2062,8 +2270,8 @@ class Log_Manager_Hooks
         $profile_url = get_author_posts_url($user_id);
         $details = [
             'field' => $meta_key,
-            'value' => $this->format_field_value($meta_value),
-            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'>👤 Visit profile</a>" : ''
+            'value' => $this->sdw_format_field_value($meta_value),
+            'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
         Log_Manager::log(
@@ -2076,9 +2284,14 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_plugin_activation($plugin, $network_wide)
+    /**
+     * Log plugin activation
+     * @param string $plugin The plugin file
+     * @param bool $network_wide Whether network-wide activation
+     */
+    public function sdw_log_plugin_activation($plugin, $network_wide)
     {
-        $plugin_name = $this->get_plugin_name($plugin);
+        $plugin_name = $this->sdw_get_plugin_name($plugin);
         $plugin_data = get_plugin_data(WP_PLUGIN_DIR . '/' . $plugin);
 
         $author = $plugin_data['Author'] ?? 'Unknown';
@@ -2095,7 +2308,7 @@ class Log_Manager_Hooks
         ];
 
         if ($plugin_url) {
-            $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'>🔗 Plugin details</a>";
+            $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'> Plugin details</a>";
         }
 
         Log_Manager::log(
@@ -2112,9 +2325,14 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_plugin_deactivation($plugin, $network_wide)
+    /**
+     * Log plugin deactivation
+     * @param string $plugin The plugin file
+     * @param bool $network_wide Whether network-wide deactivation
+     */
+    public function sdw_log_plugin_deactivation($plugin, $network_wide)
     {
-        $plugin_name = $this->get_plugin_name($plugin);
+        $plugin_name = $this->sdw_get_plugin_name($plugin);
 
         $plugin_data = get_plugin_data(WP_PLUGIN_DIR . '/' . $plugin);
         $plugin_url = $plugin_data['PluginURI'] ?? '';
@@ -2126,7 +2344,7 @@ class Log_Manager_Hooks
         ];
 
         if ($plugin_url) {
-            $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'>🔗 Plugin details</a>";
+            $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'> Plugin details</a>";
         }
 
         Log_Manager::log(
@@ -2143,12 +2361,15 @@ class Log_Manager_Hooks
         }
     }
 
-
-    public function log_plugin_delete($plugin_file)
+    /**
+     * Log plugin deletion
+     * @param string $plugin_file The plugin file
+     */
+    public function sdw_log_plugin_delete($plugin_file)
     {
         $plugin_data = get_plugin_data(WP_PLUGIN_DIR . '/' . $plugin_file);
 
-        $plugin_name = $plugin_data['Name'] ?? $this->get_plugin_name($plugin_file);
+        $plugin_name = $plugin_data['Name'] ?? $this->sdw_get_plugin_name($plugin_file);
         $plugin_url = $plugin_data['PluginURI'] ?? '';
 
         $details = [
@@ -2159,7 +2380,7 @@ class Log_Manager_Hooks
         ];
 
         if ($plugin_url) {
-            $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'>🔗 Plugin details</a>";
+            $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'> Plugin details</a>";
         }
 
         Log_Manager::log(
@@ -2172,7 +2393,13 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_theme_switch($new_name, $new_theme, $old_theme)
+    /**
+     * Log theme switch
+     * @param string $new_name The new theme name
+     * @param WP_Theme $new_theme The new theme object
+     * @param WP_Theme $old_theme The old theme object
+     */
+    public function sdw_log_theme_switch($new_name, $new_theme, $old_theme)
     {
         $new_theme_url = $new_theme->get('ThemeURI') ?? '';
         $old_theme_url = $old_theme ? ($old_theme->get('ThemeURI') ?? '') : '';
@@ -2188,7 +2415,7 @@ class Log_Manager_Hooks
         ];
 
         if ($new_theme_url) {
-            $details['new_theme_details'] = "<a href='" . esc_url($new_theme_url) . "' target='_blank'>🔗 New theme details</a>";
+            $details['new_theme_details'] = "<a href='" . esc_url($new_theme_url) . "' target='_blank'> New theme details</a>";
         }
 
         Log_Manager::log(
@@ -2201,11 +2428,18 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_option_update($option_name, $old_value, $value)
+    /**
+     * Log option update
+     * @param string $option_name The option name
+     * @param mixed $old_value The old option value
+     * @param mixed $value The new option value
+     */
+    public function sdw_log_option_update($option_name, $old_value, $value)
     {
-        // if (Log_Manager::should_skip_option($option_name)) {
-        //     return;
-        // }
+        // Check if this is a meaningful change or just system noise
+        if (!$this->sdw_is_meaningful_option_change($option_name, $old_value, $value)) {
+            return;
+        }
 
         if ($option_name === 'active_plugins' && (isset(self::$old_option_values['active_plugins']))) {
             return;
@@ -2270,13 +2504,13 @@ class Log_Manager_Hooks
             $severity = 'warning';
         }
 
-        $changes = $this->get_option_changes($option_name, $old_value, $value);
+        $changes = $this->sdw_get_option_changes($option_name, $old_value, $value);
 
         if (empty($changes)) {
             return;
         }
 
-        $settings_page = $this->get_settings_page_link($option_name);
+        $settings_page = $this->sdw_get_settings_page_link($option_name);
         if ($settings_page) {
             $changes['settings_page'] = $settings_page;
         }
@@ -2285,14 +2519,18 @@ class Log_Manager_Hooks
             'option_updated',
             'option',
             0,
-            $this->get_option_label($option_name),
+            $this->sdw_get_option_label($option_name),
             $changes,
             $severity
         );
     }
 
-
-    private function get_settings_page_link($option_name)
+    /**
+     * Get settings page link for an option
+     * @param string $option_name The option name
+     * @return string|bool The settings page link or false
+     */
+    private function sdw_get_settings_page_link($option_name)
     {
         $pages = [
             'blogname' => 'options-general.php',
@@ -2372,20 +2610,27 @@ class Log_Manager_Hooks
         foreach ($option_groups as $group => $page) {
             if (strpos($option_name, $group) !== false) {
                 $url = admin_url($page);
-                return "<a href='" . esc_url($url) . "' target='_blank'>⚙️ Go to {$group} settings</a>";
+                return "<a href='" . esc_url($url) . "' target='_blank'> Go to {$group} settings</a>";
             }
         }
 
         if (isset($pages[$option_name])) {
             $url = admin_url($pages[$option_name]);
             $page_name = str_replace(['options-', '.php'], '', $pages[$option_name]);
-            return "<a href='" . esc_url($url) . "' target='_blank'>⚙️ Go to {$page_name} settings</a>";
+            return "<a href='" . esc_url($url) . "' target='_blank'> Go to {$page_name} settings</a>";
         }
 
         return false;
     }
 
-    private function get_option_changes($option_name, $old_value, $new_value)
+    /**
+     * Get option changes in human-readable format
+     * @param string $option_name The option name
+     * @param mixed $old_value The old value
+     * @param mixed $new_value The new value
+     * @return array The changes array
+     */
+    private function sdw_get_option_changes($option_name, $old_value, $new_value)
     {
         $changes = [];
 
@@ -2457,8 +2702,8 @@ class Log_Manager_Hooks
 
             case 'default_role':
                 $changes['default_user_role'] = [
-                    'old' => $this->get_role_label($old_value),
-                    'new' => $this->get_role_label($new_value)
+                    'old' => $this->sdw_get_role_label($old_value),
+                    'new' => $this->sdw_get_role_label($new_value)
                 ];
                 break;
 
@@ -2536,21 +2781,21 @@ class Log_Manager_Hooks
                         ];
                     }
                 } elseif (is_array($old_value) && is_array($new_value)) {
-                    $added = $this->array_diff_recursive($new_value, $old_value);
-                    $removed = $this->array_diff_recursive($old_value, $new_value);
+                    $added = $this->sdw_array_diff_recursive($new_value, $old_value);
+                    $removed = $this->sdw_array_diff_recursive($old_value, $new_value);
 
                     if (!empty($added) || !empty($removed)) {
                         $changes['array_changes'] = [];
 
                         if (!empty($added)) {
-                            $added_strings = $this->array_to_strings($added);
+                            $added_strings = $this->sdw_array_to_strings($added);
                             if (!empty($added_strings)) {
                                 $changes['array_changes']['added'] = $added_strings;
                             }
                         }
 
                         if (!empty($removed)) {
-                            $removed_strings = $this->array_to_strings($removed);
+                            $removed_strings = $this->sdw_array_to_strings($removed);
                             if (!empty($removed_strings)) {
                                 $changes['array_changes']['removed'] = $removed_strings;
                             }
@@ -2564,7 +2809,13 @@ class Log_Manager_Hooks
         return $changes;
     }
 
-    private function array_diff_recursive($array1, $array2)
+    /**
+     * Recursive array diff
+     * @param array $array1 First array
+     * @param array $array2 Second array
+     * @return array The difference
+     */
+    private function sdw_array_diff_recursive($array1, $array2)
     {
         $result = [];
 
@@ -2572,7 +2823,7 @@ class Log_Manager_Hooks
             if (!array_key_exists($key, $array2)) {
                 $result[$key] = $value;
             } elseif (is_array($value) && is_array($array2[$key])) {
-                $diff = $this->array_diff_recursive($value, $array2[$key]);
+                $diff = $this->sdw_array_diff_recursive($value, $array2[$key]);
                 if (!empty($diff)) {
                     $result[$key] = $diff;
                 }
@@ -2584,13 +2835,18 @@ class Log_Manager_Hooks
         return $result;
     }
 
-    private function array_to_strings($array)
+    /**
+     * Convert array to strings for display
+     * @param array $array The array to convert
+     * @return array Array of strings
+     */
+    private function sdw_array_to_strings($array)
     {
         $strings = [];
 
         foreach ($array as $key => $value) {
             if (is_array($value)) {
-                $strings[] = $key . ': [' . implode(', ', $this->array_to_strings($value)) . ']';
+                $strings[] = $key . ': [' . implode(', ', $this->sdw_array_to_strings($value)) . ']';
             } else {
                 $strings[] = $key . ': ' . (string) $value;
             }
@@ -2599,7 +2855,12 @@ class Log_Manager_Hooks
         return $strings;
     }
 
-    private function get_option_label($option_name)
+    /**
+     * Get option label
+     * @param string $option_name The option name
+     * @return string The option label
+     */
+    private function sdw_get_option_label($option_name)
     {
         $labels = [
             'blogname' => 'Site Title',
@@ -2648,7 +2909,13 @@ class Log_Manager_Hooks
         return $labels[$option_name] ?? ucwords(str_replace('_', ' ', $option_name));
     }
 
-    public function log_widget_update($option_name, $old_value, $value)
+    /**
+     * Log widget update
+     * @param string $option_name The option name
+     * @param mixed $old_value The old value
+     * @param mixed $value The new value
+     */
+    public function sdw_log_widget_update($option_name, $old_value, $value)
     {
         if (strpos($option_name, 'widget_') === 0) {
             $widget_name = str_replace('widget_', '', $option_name);
@@ -2681,7 +2948,13 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_comment_post($comment_id, $comment_approved, $commentdata)
+    /**
+     * Log comment posting
+     * @param int $comment_id The comment ID
+     * @param int|string $comment_approved The approval status
+     * @param array $commentdata The comment data
+     */
+    public function sdw_log_comment_post($comment_id, $comment_approved, $commentdata)
     {
         $post = get_post($commentdata['comment_post_ID']);
 
@@ -2705,19 +2978,19 @@ class Log_Manager_Hooks
         ];
 
         if ($comment_edit_url) {
-            $details['edit_comment'] = "<a href='" . esc_url($comment_edit_url) . "' target='_blank'>✏️ Edit comment</a>";
+            $details['edit_comment'] = "<a href='" . esc_url($comment_edit_url) . "' target='_blank'> Edit comment</a>";
         }
 
         if ($comment_view_url) {
-            $details['view_comment'] = "<a href='" . esc_url($comment_view_url) . "' target='_blank'>👁️ View comment</a>";
+            $details['view_comment'] = "<a href='" . esc_url($comment_view_url) . "' target='_blank'> View comment</a>";
         }
 
         if ($post_view_url) {
-            $details['view_post'] = "<a href='" . esc_url($post_view_url) . "' target='_blank'>📝 View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($post_view_url) . "' target='_blank'> View post</a>";
         }
 
         if ($post_edit_url) {
-            $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'>✏️ Edit post</a>";
+            $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'> Edit post</a>";
         }
 
         Log_Manager::log(
@@ -2730,7 +3003,11 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_comment_edit($comment_id)
+    /**
+     * Log comment edit
+     * @param int $comment_id The comment ID
+     */
+    public function sdw_log_comment_edit($comment_id)
     {
         $comment = get_comment($comment_id);
         if (!$comment)
@@ -2750,19 +3027,19 @@ class Log_Manager_Hooks
         ];
 
         if ($comment_edit_url) {
-            $details['edit_comment'] = "<a href='" . esc_url($comment_edit_url) . "' target='_blank'>✏️ Edit comment</a>";
+            $details['edit_comment'] = "<a href='" . esc_url($comment_edit_url) . "' target='_blank'> Edit comment</a>";
         }
 
         if ($comment_view_url) {
-            $details['view_comment'] = "<a href='" . esc_url($comment_view_url) . "' target='_blank'>👁️ View comment</a>";
+            $details['view_comment'] = "<a href='" . esc_url($comment_view_url) . "' target='_blank'> View comment</a>";
         }
 
         if ($post_view_url) {
-            $details['view_post'] = "<a href='" . esc_url($post_view_url) . "' target='_blank'>📝 View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($post_view_url) . "' target='_blank'> View post</a>";
         }
 
         if ($post_edit_url) {
-            $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'>✏️ Edit post</a>";
+            $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'> Edit post</a>";
         }
 
         Log_Manager::log(
@@ -2775,7 +3052,12 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_comment_delete($comment_id)
+    /**
+     * Log comment deletion
+     * @param int $comment_id The comment ID
+     * @param WP_Comment $comment The comment object
+     */
+    public function sdw_log_comment_delete($comment_id, $comment)
     {
         $comment = get_comment($comment_id);
         if ($comment) {
@@ -2792,11 +3074,11 @@ class Log_Manager_Hooks
             ];
 
             if ($post_view_url) {
-                $details['view_post'] = "<a href='" . esc_url($post_view_url) . "' target='_blank'>📝 View post</a>";
+                $details['view_post'] = "<a href='" . esc_url($post_view_url) . "' target='_blank'> View post</a>";
             }
 
             if ($post_edit_url) {
-                $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'>✏️ Edit post</a>";
+                $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'> Edit post</a>";
             }
 
             Log_Manager::log(
@@ -2810,7 +3092,13 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_comment_status_change($new_status, $old_status, $comment)
+    /**
+     * Log comment status change
+     * @param string $new_status The new status
+     * @param string $old_status The old status
+     * @param WP_Comment $comment The comment object
+     */
+    public function sdw_log_comment_status_change($new_status, $old_status, $comment)
     {
         $comment_id = is_object($comment) ? $comment->comment_ID : $comment;
         $details = [
@@ -2829,7 +3117,11 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_media_add($attachment_id)
+    /**
+     * Log media addition
+     * @param int $attachment_id The attachment ID
+     */
+    public function sdw_log_media_add($attachment_id)
     {
         $attachment = get_post($attachment_id);
         $file = get_attached_file($attachment_id);
@@ -2840,7 +3132,7 @@ class Log_Manager_Hooks
             'type' => $attachment->post_mime_type,
             'filename' => basename($file),
             'size' => $filesize,
-            'view_media' => "<a href='" . esc_url($file_url) . "' target='_blank'>🖼️ View media</a>",
+            'view_media' => "<a href='" . esc_url($file_url) . "' target='_blank'> View media</a>",
             'uploaded_by' => get_user_by('id', $attachment->post_author)->display_name ?? 'Unknown'
         ];
 
@@ -2854,13 +3146,18 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_media_edit($attachment_id)
+    /**
+     * Log media edit
+     * @param int $attachment_id The attachment ID
+     * @param WP_Post $attachment The attachment object
+     */
+    public function sdw_log_media_edit($attachment_id, $attachment)
     {
         $attachment = get_post($attachment_id);
         $file_url = wp_get_attachment_url($attachment_id);
 
         $details = [
-            'view_media' => $file_url ? "<a href='" . esc_url($file_url) . "' target='_blank'>🖼️ View media</a>" : ''
+            'view_media' => $file_url ? "<a href='" . esc_url($file_url) . "' target='_blank'> View media</a>" : ''
         ];
 
         Log_Manager::log(
@@ -2873,7 +3170,11 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_media_delete($attachment_id)
+    /**
+     * Log media deletion
+     * @param int $attachment_id The attachment ID
+     */
+    public function sdw_log_media_delete($attachment_id)
     {
         if (doing_action('before_delete_post') || doing_action('delete_post')) {
             return;
@@ -2922,7 +3223,7 @@ class Log_Manager_Hooks
                     $attachment->post_title,
                     [
                         'post_type' => $attachment->post_type,
-                        'status' => $this->get_post_status_label($attachment->post_status)
+                        'status' => $this->sdw_get_post_status_label($attachment->post_status)
                     ],
                     'warning'
                 );
@@ -2930,7 +3231,10 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_import_start()
+    /**
+     * Log import start
+     */
+    public function sdw_log_import_start()
     {
         $importer = isset($_REQUEST['import']) ? sanitize_text_field($_REQUEST['import']) : 'unknown';
         $file = isset($_FILES['import']['name']) ? sanitize_file_name($_FILES['import']['name']) : 'unknown';
@@ -2951,7 +3255,10 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_import_end()
+    /**
+     * Log import completion
+     */
+    public function sdw_log_import_end()
     {
         $importer = isset($_REQUEST['import']) ? sanitize_text_field($_REQUEST['import']) : 'unknown';
 
@@ -2970,7 +3277,11 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_export_start($args)
+    /**
+     * Log export start
+     * @param array $args Export arguments
+     */
+    public function sdw_log_export_start($args)
     {
         $content = isset($args['content']) ? $args['content'] : 'all';
         $author = isset($args['author']) ? $args['author'] : 'all';
@@ -2985,12 +3296,12 @@ class Log_Manager_Hooks
 
         // ADD THIS: Create export page link
         $export_url = admin_url('export.php');
-        $export_link = "<a href='" . esc_url($export_url) . "' target='_blank'>📤 Go to Export Tools</a>";
+        $export_link = "<a href='" . esc_url($export_url) . "' target='_blank'> Go to Export Tools</a>";
 
         $details = [
             'content_type' => $content_types[$content] ?? ucfirst($content),
             'author' => $author === 'all' ? 'All authors' : 'Author ID: ' . $author,
-            'export_page' => $export_link, // ADD THIS LINE
+            'export_page' => $export_link,
         ];
 
         // Add conditional details if they exist
@@ -3031,8 +3342,14 @@ class Log_Manager_Hooks
         );
     }
 
-
-    public function log_featured_image_add($meta_id, $post_id, $meta_key, $meta_value)
+    /**
+     * Log featured image addition
+     * @param int $meta_id The meta ID
+     * @param int $post_id The post ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
+     */
+    public function sdw_log_featured_image_add($meta_id, $post_id, $meta_key, $meta_value)
     {
         if ($meta_key === '_thumbnail_id' && $meta_value) {
             $post = get_post($post_id);
@@ -3048,7 +3365,7 @@ class Log_Manager_Hooks
                     'action' => 'Featured image set',
                     'image' => $image_name,
                     'image_id' => $meta_value,
-                    'view_image' => $image_url ? "<a href='" . esc_url($image_url) . "' target='_blank'>🖼️ View image</a>" : ''
+                    'view_image' => $image_url ? "<a href='" . esc_url($image_url) . "' target='_blank'> View image</a>" : ''
                 ];
 
                 if (isset(self::$old_meta_data['removed_featured_image'][$post_id])) {
@@ -3059,10 +3376,10 @@ class Log_Manager_Hooks
                 }
 
                 if ($edit_url) {
-                    $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+                    $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
                 }
                 if ($view_url) {
-                    $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+                    $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
                 }
 
                 Log_Manager::log(
@@ -3077,7 +3394,14 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_featured_image_update($meta_id, $post_id, $meta_key, $meta_value)
+    /**
+     * Log featured image update
+     * @param int $meta_id The meta ID
+     * @param int $post_id The post ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
+     */
+    public function sdw_log_featured_image_update($meta_id, $post_id, $meta_key, $meta_value)
     {
         if ($meta_key === '_thumbnail_id') {
             $post = get_post($post_id);
@@ -3098,14 +3422,14 @@ class Log_Manager_Hooks
                             'action' => 'Featured image changed',
                             'old_image' => $old_image ? $old_image->post_title : 'ID ' . $old_image_id,
                             'new_image' => $new_image ? $new_image->post_title : 'ID ' . $new_image_id,
-                            'view_image' => $new_image_url ? "<a href='" . esc_url($new_image_url) . "' target='_blank'>🖼️ View new image</a>" : ''
+                            'view_image' => $new_image_url ? "<a href='" . esc_url($new_image_url) . "' target='_blank'> View new image</a>" : ''
                         ];
 
                         if ($edit_url) {
-                            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+                            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
                         }
                         if ($view_url) {
-                            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+                            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
                         }
 
                         Log_Manager::log(
@@ -3120,14 +3444,14 @@ class Log_Manager_Hooks
                         $details = [
                             'action' => 'Featured image added',
                             'image' => $new_image ? $new_image->post_title : 'ID ' . $new_image_id,
-                            'view_image' => $new_image_url ? "<a href='" . esc_url($new_image_url) . "' target='_blank'>🖼️ View image</a>" : ''
+                            'view_image' => $new_image_url ? "<a href='" . esc_url($new_image_url) . "' target='_blank'> View image</a>" : ''
                         ];
 
                         if ($edit_url) {
-                            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+                            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
                         }
                         if ($view_url) {
-                            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+                            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
                         }
 
                         Log_Manager::log(
@@ -3144,8 +3468,14 @@ class Log_Manager_Hooks
         }
     }
 
-
-    public function log_featured_image_delete($meta_ids, $post_id, $meta_key, $meta_value)
+    /**
+     * Log featured image deletion
+     * @param array $meta_ids Array of meta IDs
+     * @param int $post_id The post ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
+     */
+    public function sdw_log_featured_image_delete($meta_ids, $post_id, $meta_key, $meta_value)
     {
         if ($meta_key === '_thumbnail_id') {
             $post = get_post($post_id);
@@ -3163,10 +3493,10 @@ class Log_Manager_Hooks
                 ];
 
                 if ($edit_url) {
-                    $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+                    $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
                 }
                 if ($view_url) {
-                    $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+                    $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
                 }
 
                 Log_Manager::log(
@@ -3183,7 +3513,11 @@ class Log_Manager_Hooks
         }
     }
 
-    public function log_acf_save($post_id)
+    /**
+     * Log ACF field save
+     * @param mixed $post_id The post ID
+     */
+    public function sdw_log_acf_save($post_id)
     {
         if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
@@ -3210,11 +3544,11 @@ class Log_Manager_Hooks
                             $old_field = isset(self::$old_acf_data[$post_id][$field_name]) ?
                                 self::$old_acf_data[$post_id][$field_name] : null;
 
-                            if ($old_field && $this->values_differ($old_field['value'], $field['value'])) {
+                            if ($old_field && $this->sdw_values_differ($old_field['value'], $field['value'])) {
                                 $field_label = $field['label'] ?? $field_name;
                                 $changes[$field_label] = [
-                                    'old' => $this->format_field_value($old_field['value'], $old_field['type']),
-                                    'new' => $this->format_field_value($field['value'], $field['type'])
+                                    'old' => $this->sdw_format_field_value($old_field['value'], $old_field['type']),
+                                    'new' => $this->sdw_format_field_value($field['value'], $field['type'])
                                 ];
                             }
                         }
@@ -3229,7 +3563,7 @@ class Log_Manager_Hooks
                     ]);
 
                     if ($edit_url) {
-                        $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit term</a>";
+                        $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit term</a>";
                     }
 
                     Log_Manager::log(
@@ -3261,11 +3595,11 @@ class Log_Manager_Hooks
                     $old_field = isset(self::$old_acf_data[$post_id][$field_name]) ?
                         self::$old_acf_data[$post_id][$field_name] : null;
 
-                    if ($old_field && $this->values_differ($old_field['value'], $field['value'])) {
+                    if ($old_field && $this->sdw_values_differ($old_field['value'], $field['value'])) {
                         $field_label = $field['label'] ?? $field_name;
                         $changes[$field_label] = [
-                            'old' => $this->format_field_value($old_field['value'], $old_field['type']),
-                            'new' => $this->format_field_value($field['value'], $field['type'])
+                            'old' => $this->sdw_format_field_value($old_field['value'], $old_field['type']),
+                            'new' => $this->sdw_format_field_value($field['value'], $field['type'])
                         ];
                     }
                 }
@@ -3282,10 +3616,10 @@ class Log_Manager_Hooks
             ]);
 
             if ($edit_url) {
-                $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+                $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
             }
             if ($view_url) {
-                $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+                $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
             }
 
             Log_Manager::log(
@@ -3302,191 +3636,12 @@ class Log_Manager_Hooks
     }
 
     /**
-     * FIXED: Enhanced ACF Field Group Update Logging
-     */
-    // public function log_acf_field_group_update($field_group)
-    // {
-    //     $changes = [];
-    //     $field_changes = [];
-    //     $field_group_id = $field_group['ID'] ?? 0;
-
-    //     // Get old field group data
-    //     $old_field_group = isset(self::$old_acf_data['field_groups'][$field_group['key']]) ?
-    //         self::$old_acf_data['field_groups'][$field_group['key']] : null;
-
-    //     if ($old_field_group) {
-    //         // 1. Basic field group settings
-    //         $basic_settings = [
-    //             'title',
-    //             'menu_order',
-    //             'position',
-    //             'style',
-    //             'label_placement',
-    //             'instruction_placement',
-    //             'description',
-    //             'active'
-    //         ];
-
-    //         foreach ($basic_settings as $setting) {
-    //             if (
-    //                 isset($old_field_group[$setting]) && isset($field_group[$setting]) &&
-    //                 $old_field_group[$setting] != $field_group[$setting]
-    //             ) {
-
-    //                 $old_val = $old_field_group[$setting];
-    //                 $new_val = $field_group[$setting];
-
-    //                 if (is_bool($old_val))
-    //                     $old_val = $old_val ? 'Yes' : 'No';
-    //                 if (is_bool($new_val))
-    //                     $new_val = $new_val ? 'Yes' : 'No';
-
-    //                 if (is_array($old_val))
-    //                     $old_val = implode(', ', $old_val);
-    //                 if (is_array($new_val))
-    //                     $new_val = implode(', ', $new_val);
-
-    //                 $changes[$setting] = [
-    //                     'old' => $old_val ?: '(empty)',
-    //                     'new' => $new_val ?: '(empty)'
-    //                 ];
-    //             }
-    //         }
-
-    //         // 2. Location rules - detailed comparison
-    //         if (isset($old_field_group['location']) && isset($field_group['location'])) {
-    //             $old_locations = $this->format_acf_locations($old_field_group['location']);
-    //             $new_locations = $this->format_acf_locations($field_group['location']);
-
-    //             if ($old_locations !== $new_locations) {
-    //                 $changes['location_rules'] = [
-    //                     'old' => $old_locations,
-    //                     'new' => $new_locations
-    //                 ];
-    //             }
-    //         }
-
-    //         // 3. Hide on screen settings
-    //         if (isset($old_field_group['hide_on_screen']) && isset($field_group['hide_on_screen'])) {
-    //             $old_hide = is_array($old_field_group['hide_on_screen']) ? $old_field_group['hide_on_screen'] : [];
-    //             $new_hide = is_array($field_group['hide_on_screen']) ? $field_group['hide_on_screen'] : [];
-
-    //             $added = array_diff($new_hide, $old_hide);
-    //             $removed = array_diff($old_hide, $new_hide);
-
-    //             if (!empty($added) || !empty($removed)) {
-    //                 $hide_changes = [];
-    //                 if (!empty($added)) {
-    //                     $hide_changes['added'] = array_values($added);
-    //                 }
-    //                 if (!empty($removed)) {
-    //                     $hide_changes['removed'] = array_values($removed);
-    //                 }
-    //                 $changes['hide_on_screen'] = $hide_changes;
-    //             }
-    //         }
-
-    //         // 4. Post type and taxonomy assignments
-    //         $this->check_acf_post_type_taxonomy_changes($old_field_group, $field_group, $changes);
-
-    //         // 5. Field changes - EXTENSIVE DETECTION
-    //         if (isset($old_field_group['fields']) && isset($field_group['fields'])) {
-    //             $old_fields_by_key = [];
-    //             $old_fields_by_name = [];
-    //             foreach ($old_field_group['fields'] as $field) {
-    //                 $old_fields_by_key[$field['key']] = $field;
-    //                 if (isset($field['name'])) {
-    //                     $old_fields_by_name[$field['name']] = $field;
-    //                 }
-    //             }
-
-    //             $new_fields_by_key = [];
-    //             foreach ($field_group['fields'] as $field) {
-    //                 $new_fields_by_key[$field['key']] = $field;
-    //             }
-
-    //             // Track added fields
-    //             $added_fields = array_diff_key($new_fields_by_key, $old_fields_by_key);
-    //             foreach ($added_fields as $field_key => $field) {
-    //                 $field_label = $field['label'] ?? $field['name'] ?? 'Unnamed field';
-    //                 $field_changes[] = "➕ <strong>Added field:</strong> '{$field_label}' (Type: {$field['type']})";
-    //             }
-
-    //             // Track removed fields
-    //             $removed_fields = array_diff_key($old_fields_by_key, $new_fields_by_key);
-    //             foreach ($removed_fields as $field_key => $field) {
-    //                 $field_label = $field['label'] ?? $field['name'] ?? 'Unnamed field';
-    //                 $field_changes[] = "🗑️ <strong>Removed field:</strong> '{$field_label}' (Type: {$field['type']})";
-    //             }
-
-    //             // Track modified fields - CHECK EVERYTHING
-    //             foreach ($old_fields_by_key as $field_key => $old_field) {
-    //                 if (isset($new_fields_by_key[$field_key])) {
-    //                     $new_field = $new_fields_by_key[$field_key];
-
-    //                     $field_identifier = $new_field['label'] ?? $old_field['label'] ??
-    //                         $new_field['name'] ?? $old_field['name'] ?? 'Unnamed field';
-
-    //                     $field_modifications = $this->get_acf_field_modifications($old_field, $new_field);
-
-    //                     if (!empty($field_modifications)) {
-    //                         $field_changes[] = "✏️ <strong>Modified field '{$field_identifier}':</strong><br>" .
-    //                             implode('<br>', array_map(function ($item) {
-    //                                 return "&nbsp;&nbsp;&nbsp;&nbsp;• {$item}";
-    //                             }, $field_modifications));
-    //                     }
-    //                 }
-    //             }
-
-    //             if (!empty($field_changes)) {
-    //                 $changes['field_changes'] = $field_changes;
-    //             }
-    //         }
-    //     }
-
-    //     $edit_url = $field_group_id ? admin_url('post.php?post=' . $field_group_id . '&action=edit') : '';
-    //     $details = [
-    //         'field_group' => $field_group['title'],
-    //         'key' => $field_group['key'],
-    //         'fields_count' => isset($field_group['fields']) ? count($field_group['fields']) : 0,
-    //     ];
-
-    //     if ($edit_url) {
-    //         $details['edit_acf_group'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>🔧 Edit ACF Field Group</a>";
-    //     }
-
-    //     if (!empty($changes)) {
-    //         $details = array_merge($details, $changes);
-
-    //         // Add comprehensive summary
-    //         $field_changes_count = isset($changes['field_changes']) ? count($changes['field_changes']) : 0;
-    //         $setting_changes_count = count($changes) - ($field_changes_count > 0 ? 1 : 0);
-
-    //         $details['summary'] = "{$field_changes_count} field changes, {$setting_changes_count} setting changes";
-    //     } else {
-    //         $details['note'] = 'ACF field group saved (no changes detected)';
-    //     }
-
-    //     Log_Manager::log(
-    //         'acf_field_group_updated',
-    //         'acf',
-    //         $field_group_id,
-    //         $field_group['title'],
-    //         $details,
-    //         'info'
-    //     );
-
-    //     // Store current data for next comparison
-    //     if (!isset(self::$old_acf_data['field_groups'])) {
-    //         self::$old_acf_data['field_groups'] = [];
-    //     }
-    //     self::$old_acf_data['field_groups'][$field_group['key']] = $field_group;
-    // }
-
-    /**
      * Check ACF post type and taxonomy changes
+     * @param array $old_field_group Old field group data
+     * @param array $new_field_group New field group data
+     * @param array &$changes Reference to changes array
      */
-    private function check_acf_post_type_taxonomy_changes($old_field_group, $new_field_group, &$changes)
+    private function sdw_check_acf_post_type_taxonomy_changes($old_field_group, $new_field_group, &$changes)
     {
         // Check post type assignments
         if (isset($old_field_group['post_types']) && isset($new_field_group['post_types'])) {
@@ -3540,122 +3695,11 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Get ACF field modifications
+     * Format ACF locations for display
+     * @param array $locations The location rules
+     * @return string Formatted location string
      */
-    // private function get_acf_field_modifications($old_field, $new_field)
-    // {
-    //     $modifications = [];
-
-    //     $field_properties = [
-    //         'label',
-    //         'name',
-    //         'type',
-    //         'required',
-    //         'default_value',
-    //         'instructions',
-    //         'placeholder',
-    //         'wrapper',
-    //         'choices',
-    //         'allow_null',
-    //         'multiple',
-    //         'ui',
-    //         'ajax',
-    //         'return_format',
-    //         'library',
-    //         'min',
-    //         'max',
-    //         'step',
-    //         'prepend',
-    //         'append',
-    //         'maxlength',
-    //         'rows',
-    //         'new_lines',
-    //         'layout',
-    //         'button_label',
-    //         'collapsed',
-    //         'conditional_logic',
-    //         'parent'
-    //     ];
-
-    //     foreach ($field_properties as $prop) {
-    //         $old_val = $old_field[$prop] ?? '';
-    //         $new_val = $new_field[$prop] ?? '';
-
-    //         if ($prop === 'wrapper') {
-    //             if (is_array($old_val) && is_array($new_val)) {
-    //                 $wrapper_changes = [];
-    //                 if (
-    //                     isset($old_val['width']) && isset($new_val['width']) &&
-    //                     $old_val['width'] !== $new_val['width']
-    //                 ) {
-    //                     $wrapper_changes[] = "Wrapper width: {$old_val['width']}% → {$new_val['width']}%";
-    //                 }
-    //                 if (
-    //                     isset($old_val['class']) && isset($new_val['class']) &&
-    //                     $old_val['class'] !== $new_val['class']
-    //                 ) {
-    //                     $wrapper_changes[] = "Wrapper class: '{$old_val['class']}' → '{$new_val['class']}'";
-    //                 }
-    //                 if (!empty($wrapper_changes)) {
-    //                     $modifications = array_merge($modifications, $wrapper_changes);
-    //                 }
-    //             }
-    //             continue;
-    //         }
-
-    //         if ($prop === 'choices' && is_array($old_val) && is_array($new_val)) {
-    //             if (serialize($old_val) !== serialize($new_val)) {
-    //                 $added = array_diff_assoc($new_val, $old_val);
-    //                 $removed = array_diff_assoc($old_val, $new_val);
-
-    //                 if (!empty($added) || !empty($removed)) {
-    //                     $choice_changes = [];
-    //                     if (!empty($added)) {
-    //                         foreach ($added as $key => $value) {
-    //                             $choice_changes[] = "Added choice: '{$key}' => '{$value}'";
-    //                         }
-    //                     }
-    //                     if (!empty($removed)) {
-    //                         foreach ($removed as $key => $value) {
-    //                             $choice_changes[] = "Removed choice: '{$key}' => '{$value}'";
-    //                         }
-    //                     }
-    //                     $modifications[] = "Choices changed";
-    //                     $modifications = array_merge($modifications, $choice_changes);
-    //                 }
-    //             }
-    //             continue;
-    //         }
-
-    //         if ($prop === 'conditional_logic' && is_array($old_val) && is_array($new_val)) {
-    //             if (serialize($old_val) !== serialize($new_val)) {
-    //                 $modifications[] = "Conditional logic updated";
-    //             }
-    //             continue;
-    //         }
-
-    //         if (empty($old_val) && empty($new_val))
-    //             continue;
-
-    //         if (is_array($old_val) && is_array($new_val)) {
-    //             if (serialize($old_val) !== serialize($new_val)) {
-    //                 $modifications[] = ucfirst($prop) . " changed";
-    //             }
-    //         } elseif ($old_val !== $new_val) {
-    //             $old_display = is_bool($old_val) ? ($old_val ? 'Yes' : 'No') : $old_val;
-    //             $new_display = is_bool($new_val) ? ($new_val ? 'Yes' : 'No') : $new_val;
-
-    //             $old_display = $old_display ?: '(empty)';
-    //             $new_display = $new_display ?: '(empty)';
-
-    //             $modifications[] = ucfirst($prop) . ": '{$old_display}' → '{$new_display}'";
-    //         }
-    //     }
-
-    //     return $modifications;
-    // }
-
-    private function format_acf_locations($locations)
+    private function sdw_format_acf_locations($locations)
     {
         if (empty($locations) || !is_array($locations)) {
             return 'No locations';
@@ -3730,43 +3774,13 @@ class Log_Manager_Hooks
         return !empty($location_strings) ? implode(' OR ', $location_strings) : 'No location rules';
     }
 
-    // public function log_acf_field_group_duplicate($new_field_group, $old_field_group)
-    // {
-    //     $details = [
-    //         'original' => $old_field_group['title'],
-    //         'duplicate' => $new_field_group['title'],
-    //         'action' => 'ACF Field Group duplicated'
-    //     ];
-
-    //     Log_Manager::log(
-    //         'acf_field_group_duplicated',
-    //         'acf',
-    //         0,
-    //         $new_field_group['title'],
-    //         $details,
-    //         'info'
-    //     );
-    // }
-
-    // public function log_acf_field_group_delete($field_group)
-    // {
-    //     $details = [
-    //         'field_group' => $field_group['title'],
-    //         'key' => $field_group['key'],
-    //         'action' => 'ACF Field Group deleted'
-    //     ];
-
-    //     Log_Manager::log(
-    //         'acf_field_group_deleted',
-    //         'acf',
-    //         0,
-    //         $field_group['title'],
-    //         $details,
-    //         'warning'
-    //     );
-    // }
-
-    private function format_field_value($value, $field_type = 'text')
+    /**
+     * Format field value for display
+     * @param mixed $value The field value
+     * @param string $field_type The field type
+     * @return string Formatted field value
+     */
+    private function sdw_format_field_value($value, $field_type = 'text')
     {
         if (is_null($value) || $value === '') {
             return '(empty)';
@@ -3832,8 +3846,13 @@ class Log_Manager_Hooks
         }
     }
 
-
-    private function values_differ($old_value, $new_value)
+    /**
+     * Check if two values differ
+     * @param mixed $old_value The old value
+     * @param mixed $new_value The new value
+     * @return bool Whether values differ
+     */
+    private function sdw_values_differ($old_value, $new_value)
     {
         if (
             ($old_value === null || $old_value === '' || $old_value === false) &&
@@ -3870,13 +3889,23 @@ class Log_Manager_Hooks
         return $old_value !== $new_value;
     }
 
-    private function get_role_label($role)
+    /**
+     * Get role label
+     * @param string $role The role slug
+     * @return string The role label
+     */
+    private function sdw_get_role_label($role)
     {
         $wp_roles = wp_roles();
         return $wp_roles->roles[$role]['name'] ?? ucfirst($role);
     }
 
-    private function get_plugin_name($plugin_file)
+    /**
+     * Get plugin name from file
+     * @param string $plugin_file The plugin file
+     * @return string The plugin name
+     */
+    private function sdw_get_plugin_name($plugin_file)
     {
         if (!function_exists('get_plugin_data')) {
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -3886,7 +3915,13 @@ class Log_Manager_Hooks
         return $plugin_data['Name'] ?? basename($plugin_file);
     }
 
-    private function get_term_names_from_input($terms_input, $taxonomy)
+    /**
+     * Get term names from input
+     * @param mixed $terms_input The terms input
+     * @param string $taxonomy The taxonomy name
+     * @return array Array of term names
+     */
+    private function sdw_get_term_names_from_input($terms_input, $taxonomy)
     {
         $term_names = [];
 
@@ -3906,7 +3941,13 @@ class Log_Manager_Hooks
         return $term_names;
     }
 
-    private function get_term_names_from_ids($term_ids, $taxonomy)
+    /**
+     * Get term names from IDs
+     * @param array $term_ids Array of term IDs
+     * @param string $taxonomy The taxonomy name
+     * @return array Array of term names
+     */
+    private function sdw_get_term_names_from_ids($term_ids, $taxonomy)
     {
         $term_names = [];
 
@@ -3921,7 +3962,7 @@ class Log_Manager_Hooks
     }
 
     /**
-     * List of post meta keys to SKIP logging
+     * List of post meta keys to skip logging
      */
     private static $skip_post_meta_keys = [
         '_edit_lock',
@@ -4027,7 +4068,7 @@ class Log_Manager_Hooks
     ];
 
     /**
-     * List of post meta keys to ALWAYS log
+     * List of post meta keys to always log
      */
     private static $important_post_meta_keys = [
         'price',
@@ -4071,8 +4112,11 @@ class Log_Manager_Hooks
 
     /**
      * Check if we should log this post meta change
+     * @param string $meta_key The meta key
+     * @param int $post_id The post ID
+     * @return bool Whether to log the change
      */
-    private function should_log_post_meta($meta_key, $post_id)
+    private function sdw_should_log_post_meta($meta_key, $post_id)
     {
         if (strpos($meta_key, '_') === 0) {
             $important_underscored = [
@@ -4123,14 +4167,18 @@ class Log_Manager_Hooks
 
     /**
      * Log post meta update
+     * @param int $meta_id The meta ID
+     * @param int $post_id The post ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
      */
-    public function log_post_meta_update($meta_id, $post_id, $meta_key, $meta_value)
+    public function sdw_log_post_meta_update($meta_id, $post_id, $meta_key, $meta_value)
     {
         if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
         }
 
-        if (!$this->should_log_post_meta($meta_key, $post_id)) {
+        if (!$this->sdw_should_log_post_meta($meta_key, $post_id)) {
             return;
         }
 
@@ -4140,10 +4188,10 @@ class Log_Manager_Hooks
 
         $old_value = get_post_meta($post_id, $meta_key, true);
 
-        $old_value_display = $this->format_post_meta_value($old_value, $meta_key);
-        $new_value_display = $this->format_post_meta_value($meta_value, $meta_key);
+        $old_value_display = $this->sdw_format_post_meta_value($old_value, $meta_key);
+        $new_value_display = $this->sdw_format_post_meta_value($meta_value, $meta_key);
 
-        if (!$this->post_meta_values_differ($old_value, $meta_value, $meta_key)) {
+        if (!$this->sdw_post_meta_values_differ($old_value, $meta_value, $meta_key)) {
             return;
         }
 
@@ -4159,7 +4207,7 @@ class Log_Manager_Hooks
             ]
         ];
 
-        $field_context = $this->get_post_meta_field_context($meta_key, $post_id);
+        $field_context = $this->sdw_get_post_meta_field_context($meta_key, $post_id);
         if ($field_context) {
             $details['field_info'] = $field_context;
         }
@@ -4170,10 +4218,10 @@ class Log_Manager_Hooks
         }
 
         if ($edit_url) {
-            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit post</a>";
+            $details['edit_post'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit post</a>";
         }
         if ($view_url) {
-            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View post</a>";
+            $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
         $severity = 'info';
@@ -4193,14 +4241,18 @@ class Log_Manager_Hooks
 
     /**
      * Log post meta addition
+     * @param int $meta_id The meta ID
+     * @param int $post_id The post ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
      */
-    public function log_post_meta_add($meta_id, $post_id, $meta_key, $meta_value)
+    public function sdw_log_post_meta_add($meta_id, $post_id, $meta_key, $meta_value)
     {
         if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
         }
 
-        if (!$this->should_log_post_meta($meta_key, $post_id)) {
+        if (!$this->sdw_should_log_post_meta($meta_key, $post_id)) {
             return;
         }
 
@@ -4211,7 +4263,7 @@ class Log_Manager_Hooks
         $edit_url = get_edit_post_link($post_id);
         $view_url = get_permalink($post_id);
 
-        $formatted_value = $this->format_post_meta_value($meta_value, $meta_key);
+        $formatted_value = $this->sdw_format_post_meta_value($meta_value, $meta_key);
 
         $details = [
             'meta_key' => $meta_key,
@@ -4219,7 +4271,7 @@ class Log_Manager_Hooks
             'value' => $formatted_value
         ];
 
-        $field_context = $this->get_post_meta_field_context($meta_key, $post_id);
+        $field_context = $this->sdw_get_post_meta_field_context($meta_key, $post_id);
         if ($field_context) {
             $details['field_info'] = $field_context;
         }
@@ -4253,14 +4305,18 @@ class Log_Manager_Hooks
 
     /**
      * Log post meta deletion
+     * @param array $meta_ids Array of meta IDs
+     * @param int $post_id The post ID
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
      */
-    public function log_post_meta_delete($meta_ids, $post_id, $meta_key, $meta_value)
+    public function sdw_log_post_meta_delete($meta_ids, $post_id, $meta_key, $meta_value)
     {
         if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
         }
 
-        if (!$this->should_log_post_meta($meta_key, $post_id)) {
+        if (!$this->sdw_should_log_post_meta($meta_key, $post_id)) {
             return;
         }
 
@@ -4271,7 +4327,7 @@ class Log_Manager_Hooks
         $edit_url = get_edit_post_link($post_id);
         $view_url = get_permalink($post_id);
 
-        $formatted_value = $this->format_post_meta_value($meta_value, $meta_key);
+        $formatted_value = $this->sdw_format_post_meta_value($meta_value, $meta_key);
 
         $details = [
             'meta_key' => $meta_key,
@@ -4279,7 +4335,7 @@ class Log_Manager_Hooks
             'value' => $formatted_value
         ];
 
-        $field_context = $this->get_post_meta_field_context($meta_key, $post_id);
+        $field_context = $this->sdw_get_post_meta_field_context($meta_key, $post_id);
         if ($field_context) {
             $details['field_info'] = $field_context;
         }
@@ -4312,9 +4368,13 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Improved value comparison for post meta
+     * Compare post meta values
+     * @param mixed $old_value The old value
+     * @param mixed $new_value The new value
+     * @param string $meta_key The meta key
+     * @return bool Whether values differ
      */
-    private function post_meta_values_differ($old_value, $new_value, $meta_key = '')
+    private function sdw_post_meta_values_differ($old_value, $new_value, $meta_key = '')
     {
         if (empty($old_value) && empty($new_value)) {
             return false;
@@ -4325,8 +4385,8 @@ class Log_Manager_Hooks
             $new_unserialized = maybe_unserialize($new_value);
 
             if (is_array($old_unserialized) && is_array($new_unserialized)) {
-                $this->recursive_ksort($old_unserialized);
-                $this->recursive_ksort($new_unserialized);
+                $this->sdw_recursive_ksort($old_unserialized);
+                $this->sdw_recursive_ksort($new_unserialized);
                 return serialize($old_unserialized) !== serialize($new_unserialized);
             }
 
@@ -4334,12 +4394,12 @@ class Log_Manager_Hooks
         }
 
         if (is_array($old_value) && is_array($new_value)) {
-            $this->recursive_ksort($old_value);
-            $this->recursive_ksort($new_value);
+            $this->sdw_recursive_ksort($old_value);
+            $this->sdw_recursive_ksort($new_value);
             return serialize($old_value) !== serialize($new_value);
         }
 
-        if ($this->is_date_field($meta_key)) {
+        if ($this->sdw_is_date_field($meta_key)) {
             $old_timestamp = strtotime($old_value);
             $new_timestamp = strtotime($new_value);
             return $old_timestamp !== $new_timestamp;
@@ -4361,8 +4421,11 @@ class Log_Manager_Hooks
 
     /**
      * Format post meta value for display
+     * @param mixed $value The value
+     * @param string $meta_key The meta key
+     * @return string Formatted value
      */
-    private function format_post_meta_value($value, $meta_key = '')
+    private function sdw_format_post_meta_value($value, $meta_key = '')
     {
         if (is_null($value) || $value === '' || $value === false) {
             return '(empty)';
@@ -4371,28 +4434,31 @@ class Log_Manager_Hooks
         if (is_serialized($value)) {
             $unserialized = maybe_unserialize($value);
             if (is_array($unserialized)) {
-                return $this->format_array_value($unserialized);
+                return $this->sdw_format_array_value($unserialized);
             }
-            return $this->format_single_value($unserialized, $meta_key);
+            return $this->sdw_format_single_value($unserialized, $meta_key);
         }
 
         if (is_array($value)) {
-            return $this->format_array_value($value);
+            return $this->sdw_format_array_value($value);
         }
 
-        return $this->format_single_value($value, $meta_key);
+        return $this->sdw_format_single_value($value, $meta_key);
     }
 
     /**
      * Format single value
+     * @param mixed $value The value
+     * @param string $meta_key The meta key
+     * @return string Formatted value
      */
-    private function format_single_value($value, $meta_key = '')
+    private function sdw_format_single_value($value, $meta_key = '')
     {
         if (is_bool($value)) {
             return $value ? 'Yes' : 'No';
         }
 
-        if ($this->is_date_field($meta_key) && !empty($value)) {
+        if ($this->sdw_is_date_field($meta_key) && !empty($value)) {
             $timestamp = strtotime($value);
             if ($timestamp !== false) {
                 return date('Y-m-d H:i:s', $timestamp);
@@ -4419,18 +4485,20 @@ class Log_Manager_Hooks
 
     /**
      * Format array value
+     * @param array $array The array
+     * @return string Formatted array
      */
-    private function format_array_value($array)
+    private function sdw_format_array_value($array)
     {
         if (empty($array)) {
             return '(empty array)';
         }
 
-        if ($this->is_associative_array($array)) {
+        if ($this->sdw_is_associative_array($array)) {
             $items = [];
             foreach ($array as $key => $val) {
                 if (is_scalar($val)) {
-                    $items[] = $key . ': ' . $this->format_single_value($val);
+                    $items[] = $key . ': ' . $this->sdw_format_single_value($val);
                 } else {
                     $items[] = $key . ': [complex value]';
                 }
@@ -4441,7 +4509,7 @@ class Log_Manager_Hooks
         $simple_values = [];
         foreach ($array as $val) {
             if (is_scalar($val)) {
-                $simple_values[] = $this->format_single_value($val);
+                $simple_values[] = $this->sdw_format_single_value($val);
             }
         }
 
@@ -4454,8 +4522,11 @@ class Log_Manager_Hooks
 
     /**
      * Get context about a post meta field
+     * @param string $meta_key The meta key
+     * @param int $post_id The post ID
+     * @return array|bool Field context or false
      */
-    private function get_post_meta_field_context($meta_key, $post_id)
+    private function sdw_get_post_meta_field_context($meta_key, $post_id)
     {
         $context = [];
 
@@ -4502,7 +4573,7 @@ class Log_Manager_Hooks
         }
 
         $post_type = get_post_type($post_id);
-        $field_labels = $this->get_post_type_field_labels($post_type);
+        $field_labels = $this->sdw_get_post_type_field_labels($post_type);
 
         if (isset($field_labels[$meta_key])) {
             $context['field_label'] = $field_labels[$meta_key];
@@ -4512,9 +4583,11 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Helper function to check if field is a date field
+     * Check if field is a date field
+     * @param string $meta_key The meta key
+     * @return bool Whether it's a date field
      */
-    private function is_date_field($meta_key)
+    private function sdw_is_date_field($meta_key)
     {
         $date_keywords = ['date', 'time', 'datetime', 'deadline', 'expiry', 'start', 'end', 'published', 'created', 'modified'];
 
@@ -4529,8 +4602,9 @@ class Log_Manager_Hooks
 
     /**
      * Recursively sort array by keys
+     * @param array &$array The array to sort
      */
-    private function recursive_ksort(&$array)
+    private function sdw_recursive_ksort(&$array)
     {
         if (!is_array($array))
             return;
@@ -4538,15 +4612,17 @@ class Log_Manager_Hooks
         ksort($array);
         foreach ($array as &$value) {
             if (is_array($value)) {
-                $this->recursive_ksort($value);
+                $this->sdw_recursive_ksort($value);
             }
         }
     }
 
     /**
      * Check if array is associative
+     * @param array $array The array to check
+     * @return bool Whether array is associative
      */
-    private function is_associative_array($array)
+    private function sdw_is_associative_array($array)
     {
         if (!is_array($array) || empty($array))
             return false;
@@ -4556,8 +4632,10 @@ class Log_Manager_Hooks
 
     /**
      * Get field labels for post type
+     * @param string $post_type The post type
+     * @return array Field labels
      */
-    private function get_post_type_field_labels($post_type)
+    private function sdw_get_post_type_field_labels($post_type)
     {
         $field_labels = [
             'product' => [
@@ -4581,14 +4659,22 @@ class Log_Manager_Hooks
         return $field_labels[$post_type] ?? [];
     }
 
-    public function check_bulk_operation_taxonomy()
+    /**
+     * Check for bulk operations on taxonomy
+     */
+    public function sdw_check_bulk_operation_taxonomy()
     {
         if (isset($_REQUEST['delete_tags']) || isset($_REQUEST['action']) || isset($_REQUEST['action2'])) {
             self::$is_bulk_operation = true;
         }
     }
 
-    public function log_menu_update($menu_id, $menu_data = [])
+    /**
+     * Log menu update
+     * @param int $menu_id The menu ID
+     * @param array $menu_data The menu data
+     */
+    public function sdw_log_menu_update($menu_id, $menu_data = [])
     {
         $menu = wp_get_nav_menu_object($menu_id);
         $details = [
@@ -4606,7 +4692,12 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_menu_created($menu_id, $menu_data)
+    /**
+     * Log menu creation
+     * @param int $menu_id The menu ID
+     * @param array $menu_data The menu data
+     */
+    public function sdw_log_menu_created($menu_id, $menu_data)
     {
         $details = [
             'menu_name' => $menu_data['menu-name'] ?? 'New Menu',
@@ -4623,7 +4714,11 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_menu_deleted($menu_id)
+    /**
+     * Log menu deletion
+     * @param int $menu_id The menu ID
+     */
+    public function sdw_log_menu_deleted($menu_id)
     {
         $details = [
             'action' => 'Menu deleted'
@@ -4639,7 +4734,12 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_sidebar_widgets_update($old_value, $new_value)
+    /**
+     * Log sidebar widgets update
+     * @param mixed $old_value The old value
+     * @param mixed $new_value The new value
+     */
+    public function sdw_log_sidebar_widgets_update($old_value, $new_value)
     {
         $details = [
             'action' => 'Sidebar widgets arrangement updated'
@@ -4655,7 +4755,11 @@ class Log_Manager_Hooks
         );
     }
 
-    public function log_customizer_save($wp_customize)
+    /**
+     * Log customizer save
+     * @param WP_Customize_Manager $wp_customize The customizer object
+     */
+    public function sdw_log_customizer_save($wp_customize)
     {
         $details = [
             'action' => 'Customizer settings saved'
@@ -4671,28 +4775,11 @@ class Log_Manager_Hooks
         );
     }
 
-    // public function log_login_failed($username)
-    // {
-    //     $details = [
-    //         'username' => $username,
-    //         'ip' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
-    //         'action' => 'Failed login attempt'
-    //     ];
-
-    //     Log_Manager::log(
-    //         'login_failed',
-    //         'security',
-    //         0,
-    //         'Failed login: ' . $username,
-    //         $details,
-    //         'warning'
-    //     );
-    // }
-
     /**
-     * Enhanced login failure logging with user existence check
+     * Log login failure
+     * @param string $username The username attempted
      */
-    public function log_login_failed($username)
+    public function sdw_log_login_failed($username)
     {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
 
@@ -4713,7 +4800,7 @@ class Log_Manager_Hooks
         }
 
         // Check for brute force patterns (simple detection)
-        $is_brute_force = $this->detect_brute_force($ip);
+        $is_brute_force = $this->sdw_detect_brute_force($ip);
         if ($is_brute_force['is_brute_force']) {
             $severity = 'critical';
             $action_type .= ' (Possible brute force attack)';
@@ -4745,9 +4832,11 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Simple brute force detection
+     * Detect brute force attempts
+     * @param string $ip The IP address
+     * @return array Brute force detection info
      */
-    private function detect_brute_force($ip)
+    private function sdw_detect_brute_force($ip)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . Log_Manager::TABLE_NAME;
@@ -4774,18 +4863,20 @@ class Log_Manager_Hooks
         ];
     }
 
-
     /**
-     * Compare two strings and show what changed
+     * Get content difference
+     * @param string $old_content The old content
+     * @param string $new_content The new content
+     * @return array Content changes
      */
-    private function get_content_diff($old_content, $new_content)
+    private function sdw_get_content_diff($old_content, $new_content)
     {
         $old_content = wp_strip_all_tags($old_content);
         $new_content = wp_strip_all_tags($new_content);
 
         // If content is too long, use summarized approach
         if (strlen($old_content) > 10000 || strlen($new_content) > 10000) {
-            return $this->get_summarized_diff($old_content, $new_content);
+            return $this->sdw_get_summarized_diff($old_content, $new_content);
         }
 
         $old_lines = explode("\n", $old_content);
@@ -4844,8 +4935,11 @@ class Log_Manager_Hooks
 
     /**
      * Get summarized diff for very long content
+     * @param string $old_content The old content
+     * @param string $new_content The new content
+     * @return array Summarized changes
      */
-    private function get_summarized_diff($old_content, $new_content)
+    private function sdw_get_summarized_diff($old_content, $new_content)
     {
         $old_length = strlen($old_content);
         $new_length = strlen($new_content);
@@ -4882,9 +4976,12 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Show word-level changes
+     * Get word-level changes
+     * @param string $old_content The old content
+     * @param string $new_content The new content
+     * @return array Word changes
      */
-    private function get_word_changes($old_content, $new_content)
+    private function sdw_get_word_changes($old_content, $new_content)
     {
         // Clean up content
         $old_content = preg_replace('/[^\w\s]/', ' ', $old_content);
@@ -4917,16 +5014,17 @@ class Log_Manager_Hooks
         return $changes;
     }
 
-
     /**
      * Format excerpt changes
+     * @param array $excerpt_data Excerpt change data
+     * @return string HTML formatted excerpt changes
      */
-    private static function format_excerpt_changes($excerpt_data)
+    private static function sdw_format_excerpt_changes($excerpt_data)
     {
         $output = '<div class="excerpt-changes">';
 
         if (isset($excerpt_data['change'])) {
-            $output .= '<div class="excerpt-header">📄 <strong>' . esc_html($excerpt_data['change']) . '</strong></div>';
+            $output .= '<div class="excerpt-header"> <strong>' . esc_html($excerpt_data['change']) . '</strong></div>';
         }
 
         if (isset($excerpt_data['characters_changed'])) {
@@ -4935,7 +5033,7 @@ class Log_Manager_Hooks
 
             $output .= '<div class="excerpt-stats">';
             $output .= '<span class="change-indicator ' . ($is_increase ? 'increase' : 'decrease') . '">';
-            $output .= $is_increase ? '📈 ' : '📉 ';
+            $output .= $is_increase ? ' ' : ' ';
             $output .= '<strong>' . abs(intval($char_change)) . ' characters</strong>';
             $output .= '</span>';
 
@@ -4969,7 +5067,12 @@ class Log_Manager_Hooks
         return $output;
     }
 
-    private static function parse_content_data($value)
+    /**
+     * Parse content data
+     * @param mixed $value The content data
+     * @return array Parsed content data
+     */
+    private static function sdw_parse_content_data($value)
     {
         if (is_string($value)) {
             // Try to parse as JSON
@@ -4995,12 +5098,12 @@ class Log_Manager_Hooks
         return ['change' => 'Content updated'];
     }
 
-
-
     /**
      * Format details for display
+     * @param array $details The details array
+     * @return string HTML formatted details
      */
-    private static function format_details_display($details)
+    private static function sdw_format_details_display($details)
     {
         if (empty($details) || !is_array($details)) {
             return '<em>' . __('No details', 'log-manager') . '</em>';
@@ -5024,18 +5127,18 @@ class Log_Manager_Hooks
 
             // Handle content changes specially
             if ($key === 'content') {
-                $output .= self::format_content_changes_for_display($value);
+                $output .= self::sdw_format_content_changes_for_display($value);
                 $output .= '</div>';
                 continue;
             }
 
             // Parse the value - it might be a JSON string
-            $parsed_value = self::parse_json_value($value);
+            $parsed_value = self::sdw_parse_json_value($value);
 
             if (is_array($parsed_value)) {
                 // Handle content change arrays
                 if (isset($parsed_value['change']) && $parsed_value['change'] === 'Content updated') {
-                    $output .= self::format_content_changes_for_display($parsed_value);
+                    $output .= self::sdw_format_content_changes_for_display($parsed_value);
                 }
                 // Handle change arrays (old/new)
                 elseif (isset($parsed_value['old']) && isset($parsed_value['new'])) {
@@ -5050,11 +5153,11 @@ class Log_Manager_Hooks
                     $output .= '<div class="array-changes">';
                     if (!empty($parsed_value['added'])) {
                         $added_items = is_array($parsed_value['added']) ? implode(', ', $parsed_value['added']) : $parsed_value['added'];
-                        $output .= '<div class="change-added">➕ <strong>Added:</strong> ' . esc_html($added_items) . '</div>';
+                        $output .= '<div class="change-added"> <strong>Added:</strong> ' . esc_html($added_items) . '</div>';
                     }
                     if (!empty($parsed_value['removed'])) {
                         $removed_items = is_array($parsed_value['removed']) ? implode(', ', $parsed_value['removed']) : $parsed_value['removed'];
-                        $output .= '<div class="change-removed">🗑️ <strong>Removed:</strong> ' . esc_html($removed_items) . '</div>';
+                        $output .= '<div class="change-removed"> <strong>Removed:</strong> ' . esc_html($removed_items) . '</div>';
                     }
                     $output .= '</div>';
                 }
@@ -5081,7 +5184,7 @@ class Log_Manager_Hooks
                 if (json_last_error() === JSON_ERROR_NONE && is_array($json_parsed)) {
                     // If it's a content update JSON
                     if (isset($json_parsed['change']) && $json_parsed['change'] === 'Content updated') {
-                        $output .= self::format_content_changes_for_display($json_parsed);
+                        $output .= self::sdw_format_content_changes_for_display($json_parsed);
                     } else {
                         $output .= '<div class="json-value">' . esc_html($parsed_value) . '</div>';
                     }
@@ -5133,9 +5236,11 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Parse JSON value - handles both JSON strings and arrays
+     * Parse JSON value
+     * @param mixed $value The value to parse
+     * @return mixed Parsed value
      */
-    private static function parse_json_value($value)
+    private static function sdw_parse_json_value($value)
     {
         if (is_string($value)) {
             // Try to decode as JSON
@@ -5157,13 +5262,15 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Format content changes for beautiful human-readable display
+     * Format content changes for display
+     * @param mixed $content_data The content data
+     * @return string HTML formatted content changes
      */
-    private static function format_content_changes_for_display($content_data)
+    private static function sdw_format_content_changes_for_display($content_data)
     {
         // Parse if it's JSON string
         if (is_string($content_data)) {
-            $content_data = self::parse_json_value($content_data);
+            $content_data = self::sdw_parse_json_value($content_data);
         }
 
         if (empty($content_data) || !is_array($content_data)) {
@@ -5174,7 +5281,7 @@ class Log_Manager_Hooks
 
         // 1. Summary bar
         $output .= '<div class="content-summary">';
-        $output .= '<strong>📝 Content was updated</strong>';
+        $output .= '<strong> Content was updated</strong>';
 
         if (isset($content_data['characters_changed'])) {
             $change = $content_data['characters_changed'];
@@ -5227,7 +5334,7 @@ class Log_Manager_Hooks
         // 3. Revisions link reminder
         if (isset($content_data['view_revisions'])) {
             $output .= '<div class="revisions-hint">';
-            $output .= '<small>👉 For full side-by-side comparison with highlights: '
+            $output .= '<small> For full side-by-side comparison with highlights: '
                 . $content_data['view_revisions']
                 . '</small>';
             $output .= '</div>';
@@ -5238,12 +5345,14 @@ class Log_Manager_Hooks
         return $output;
     }
 
-    /** acf field  */
+    /** ACF Field Group Methods */
 
     /**
-     * Capture old ACF field group data before it's updated
+     * Capture old ACF field group data before update
+     * @param int $post_id The post ID
+     * @param WP_Post $post The post object
      */
-    public function capture_old_acf_field_group($post_id, $post)
+    public function sdw_capture_old_acf_field_group($post_id, $post)
     {
         // Skip autosaves, revisions, and new drafts
         if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id) || $post->post_status === 'auto-draft') {
@@ -5320,9 +5429,10 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Log ACF field group updates with detailed change tracking
+     * Log ACF field group update
+     * @param array $field_group The field group data
      */
-    public function log_acf_field_group_update($field_group)
+    public function sdw_log_acf_field_group_update($field_group)
     {
         if (!is_array($field_group) || !isset($field_group['title'])) {
             return;
@@ -5382,8 +5492,8 @@ class Log_Manager_Hooks
 
             // 4. Check location rules
             if (isset($field_group['location']) && isset($old_data['location'])) {
-                $old_location_str = $this->format_acf_location_rules($old_data['location']);
-                $new_location_str = $this->format_acf_location_rules($field_group['location']);
+                $old_location_str = $this->sdw_format_acf_location_rules($old_data['location']);
+                $new_location_str = $this->sdw_format_acf_location_rules($field_group['location']);
 
                 if ($old_location_str !== $new_location_str) {
                     $changes['location'] = [
@@ -5457,7 +5567,7 @@ class Log_Manager_Hooks
                     } else {
                         // Existing field - check for modifications
                         $old_field = $old_fields[$field_key];
-                        $field_modifications = $this->get_acf_field_modifications($old_field, $current_field);
+                        $field_modifications = $this->sdw_get_acf_field_modifications($old_field, $current_field);
 
                         if (!empty($field_modifications)) {
                             $field_changes['modified'][] = [
@@ -5478,18 +5588,18 @@ class Log_Manager_Hooks
                 if (!empty($field_changes['added'])) {
                     $added_count = count($field_changes['added']);
                     $added_labels = array_column($field_changes['added'], 'label');
-                    $change_summary[] = "➕ {$added_count} field(s) added: " . implode(', ', $added_labels);
+                    $change_summary[] = " {$added_count} field(s) added: " . implode(', ', $added_labels);
                 }
 
                 if (!empty($field_changes['deleted'])) {
                     $deleted_count = count($field_changes['deleted']);
                     $deleted_labels = array_column($field_changes['deleted'], 'label');
-                    $change_summary[] = "🗑️ {$deleted_count} field(s) deleted: " . implode(', ', $deleted_labels);
+                    $change_summary[] = " {$deleted_count} field(s) deleted: " . implode(', ', $deleted_labels);
                 }
 
                 if (!empty($field_changes['modified'])) {
                     $modified_count = count($field_changes['modified']);
-                    $change_summary[] = "✏️ {$modified_count} field(s) modified";
+                    $change_summary[] = " {$modified_count} field(s) modified";
                 }
             }
 
@@ -5504,12 +5614,12 @@ class Log_Manager_Hooks
             'field_group' => $field_group['title'],
             'key' => $key,
             'action' => $action,
-            'location' => $this->format_acf_location_rules($field_group['location'] ?? []),
+            'location' => $this->sdw_format_acf_location_rules($field_group['location'] ?? []),
             'fields_count' => count(acf_get_fields($key) ?: [])
         ];
 
         if ($edit_url) {
-            $details['edit_acf_group'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>🔧 Edit Field Group</a>";
+            $details['edit_acf_group'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit Field Group</a>";
         }
 
         if (!empty($changes)) {
@@ -5517,7 +5627,7 @@ class Log_Manager_Hooks
             $details['summary'] = implode(' • ', $change_summary);
 
             // Create beautiful display of changes
-            $details['changes_display'] = $this->format_acf_changes_for_display($changes);
+            $details['changes_display'] = $this->sdw_format_acf_changes_for_display($changes);
         } else {
             $details['note'] = 'Field group saved (no changes detected)';
         }
@@ -5534,8 +5644,11 @@ class Log_Manager_Hooks
 
     /**
      * Get detailed modifications for an ACF field
+     * @param array $old_field Old field data
+     * @param array $new_field New field data
+     * @return array Field modifications
      */
-    private function get_acf_field_modifications($old_field, $new_field)
+    private function sdw_get_acf_field_modifications($old_field, $new_field)
     {
         $modifications = [];
 
@@ -5639,8 +5752,10 @@ class Log_Manager_Hooks
 
     /**
      * Format ACF location rules for display
+     * @param array $location_rules Location rules array
+     * @return string Formatted location string
      */
-    private function format_acf_location_rules($location_rules)
+    private function sdw_format_acf_location_rules($location_rules)
     {
         if (empty($location_rules) || !is_array($location_rules)) {
             return '(none)';
@@ -5698,9 +5813,11 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Format ACF changes for beautiful display
+     * Format ACF changes for display
+     * @param array $changes The changes array
+     * @return string HTML formatted changes
      */
-    private function format_acf_changes_for_display($changes)
+    private function sdw_format_acf_changes_for_display($changes)
     {
         $output = '';
 
@@ -5716,7 +5833,7 @@ class Log_Manager_Hooks
 
         if (!empty($basic_changes)) {
             $output .= "<div class='acf-section basic-properties'>";
-            $output .= "<h4>📋 Field Group Settings</h4>";
+            $output .= "<h4> Field Group Settings</h4>";
             foreach ($basic_changes as $prop => $change) {
                 $prop_label = ucwords(str_replace('_', ' ', $prop));
                 $output .= "<div class='change-item'>";
@@ -5732,7 +5849,7 @@ class Log_Manager_Hooks
         // 2. Location rules changes
         if (isset($changes['location'])) {
             $output .= "<div class='acf-section location-rules'>";
-            $output .= "<h4>📍 Location Rules</h4>";
+            $output .= "<h4> Location Rules</h4>";
             $output .= "<div class='change-old'><strong>Old:</strong> " . $changes['location']['old'] . "</div>";
             $output .= "<div class='change-new'><strong>New:</strong> " . $changes['location']['new'] . "</div>";
             $output .= "</div>";
@@ -5741,13 +5858,13 @@ class Log_Manager_Hooks
         // 3. Hide on screen changes
         if (isset($changes['hide_on_screen'])) {
             $output .= "<div class='acf-section hide-on-screen'>";
-            $output .= "<h4>👁️ Visibility Settings</h4>";
+            $output .= "<h4> Visibility Settings</h4>";
             if (!empty($changes['hide_on_screen']['added'])) {
-                $output .= "<div class='change-added'>➕ <strong>Now hidden:</strong> " .
+                $output .= "<div class='change-added'> <strong>Now hidden:</strong> " .
                     implode(', ', $changes['hide_on_screen']['added']) . "</div>";
             }
             if (!empty($changes['hide_on_screen']['removed'])) {
-                $output .= "<div class='change-removed'>➖ <strong>Now visible:</strong> " .
+                $output .= "<div class='change-removed'> <strong>Now visible:</strong> " .
                     implode(', ', $changes['hide_on_screen']['removed']) . "</div>";
             }
             $output .= "</div>";
@@ -5758,14 +5875,14 @@ class Log_Manager_Hooks
             $field_changes = $changes['field_changes'];
 
             $output .= "<div class='acf-section field-changes'>";
-            $output .= "<h4>🔧 Field Changes</h4>";
+            $output .= "<h4> Field Changes</h4>";
 
             // Added fields
             if (!empty($field_changes['added'])) {
                 $output .= "<div class='change-section added-fields'>";
-                $output .= "<h5>➕ Added Fields ({$field_changes['added']})</h5>";
+                $output .= "<h5> Added Fields ({$field_changes['added']})</h5>";
                 foreach ($field_changes['added'] as $field) {
-                    $field_icon = $this->get_field_type_icon($field['type']);
+                    $field_icon = $this->sdw_get_field_type_icon($field['type']);
                     $output .= "<div class='field-item added'>";
                     $output .= "{$field_icon} <strong>{$field['label']}</strong> (<code>{$field['name']}</code>) - {$field['type']}";
                     $output .= "</div>";
@@ -5776,9 +5893,9 @@ class Log_Manager_Hooks
             // Deleted fields
             if (!empty($field_changes['deleted'])) {
                 $output .= "<div class='change-section deleted-fields'>";
-                $output .= "<h5>🗑️ Deleted Fields ({$field_changes['deleted']})</h5>";
+                $output .= "<h5> Deleted Fields ({$field_changes['deleted']})</h5>";
                 foreach ($field_changes['deleted'] as $field) {
-                    $field_icon = $this->get_field_type_icon($field['type']);
+                    $field_icon = $this->sdw_get_field_type_icon($field['type']);
                     $output .= "<div class='field-item deleted'>";
                     $output .= "{$field_icon} <strong>{$field['label']}</strong> (<code>{$field['name']}</code>) - {$field['type']}";
                     $output .= "</div>";
@@ -5789,9 +5906,9 @@ class Log_Manager_Hooks
             // Modified fields
             if (!empty($field_changes['modified'])) {
                 $output .= "<div class='change-section modified-fields'>";
-                $output .= "<h5>✏️ Modified Fields ({$field_changes['modified']})</h5>";
+                $output .= "<h5> Modified Fields ({$field_changes['modified']})</h5>";
                 foreach ($field_changes['modified'] as $field) {
-                    $field_icon = $this->get_field_type_icon($this->detect_field_type_from_mods($field['modifications']));
+                    $field_icon = $this->sdw_get_field_type_icon($this->sdw_detect_field_type_from_mods($field['modifications']));
                     $output .= "<div class='field-item modified'>";
                     $output .= "{$field_icon} <strong>{$field['label']}</strong>";
 
@@ -5826,51 +5943,55 @@ class Log_Manager_Hooks
 
     /**
      * Get icon for field type
+     * @param string $field_type The field type
+     * @return string Field type icon
      */
-    private function get_field_type_icon($field_type)
+    private function sdw_get_field_type_icon($field_type)
     {
         $icons = [
-            'text' => '📝',
-            'textarea' => '📄',
-            'number' => '🔢',
-            'email' => '📧',
-            'url' => '🔗',
-            'password' => '🔑',
-            'wysiwyg' => '✍️',
-            'image' => '🖼️',
-            'file' => '📎',
-            'gallery' => '🖼️🖼️',
-            'select' => '📋',
-            'checkbox' => '☑️',
-            'radio' => '🔘',
-            'true_false' => '✅',
-            'link' => '🔗',
-            'post_object' => '📄',
-            'page_link' => '📄🔗',
-            'relationship' => '↔️',
-            'taxonomy' => '🏷️',
-            'user' => '👤',
-            'google_map' => '🗺️',
-            'date_picker' => '📅',
-            'date_time_picker' => '📅⏰',
-            'time_picker' => '⏰',
-            'color_picker' => '🎨',
-            'message' => '💬',
-            'accordion' => '📑',
-            'tab' => '📑',
-            'group' => '📦',
-            'repeater' => '🔄',
-            'flexible_content' => '🧩',
-            'clone' => '📋',
+            'text' => '',
+            'textarea' => '',
+            'number' => '',
+            'email' => '',
+            'url' => '',
+            'password' => '',
+            'wysiwyg' => '',
+            'image' => '',
+            'file' => '',
+            'gallery' => '',
+            'select' => '',
+            'checkbox' => '',
+            'radio' => '',
+            'true_false' => '',
+            'link' => '',
+            'post_object' => '',
+            'page_link' => '',
+            'relationship' => '↔',
+            'taxonomy' => '',
+            'user' => '',
+            'google_map' => '',
+            'date_picker' => '',
+            'date_time_picker' => '',
+            'time_picker' => '',
+            'color_picker' => '',
+            'message' => '',
+            'accordion' => '',
+            'tab' => '',
+            'group' => '',
+            'repeater' => '',
+            'flexible_content' => '',
+            'clone' => '',
         ];
 
-        return $icons[$field_type] ?? '🔧';
+        return $icons[$field_type] ?? '';
     }
 
     /**
      * Detect field type from modifications
+     * @param array $modifications Field modifications
+     * @return string Detected field type
      */
-    private function detect_field_type_from_mods($modifications)
+    private function sdw_detect_field_type_from_mods($modifications)
     {
         if (isset($modifications['type'])) {
             return $modifications['type']['new'];
@@ -5880,8 +6001,9 @@ class Log_Manager_Hooks
 
     /**
      * Log ACF field group deletion
+     * @param array $field_group The field group data
      */
-    public function log_acf_field_group_delete($field_group)
+    public function sdw_log_acf_field_group_delete($field_group)
     {
         if (!is_array($field_group) || !isset($field_group['title'])) {
             return;
@@ -5905,8 +6027,9 @@ class Log_Manager_Hooks
 
     /**
      * Log ACF field group duplication
+     * @param array $field_group The field group data
      */
-    public function log_acf_field_group_duplicate($field_group)
+    public function sdw_log_acf_field_group_duplicate($field_group)
     {
         if (!is_array($field_group) || !isset($field_group['title'])) {
             return;
@@ -5929,9 +6052,12 @@ class Log_Manager_Hooks
     }
 
     /**
-     * Log individual ACF field changes (when editing field definitions)
+     * Log individual ACF field changes
+     * @param int $post_id The post ID
+     * @param WP_Post $post The post object
+     * @param bool $update Whether this is an update
      */
-    public function log_acf_field_changes($post_id, $post, $update)
+    public function sdw_log_acf_field_changes($post_id, $post, $update)
     {
         // Skip autosaves, revisions, and new drafts
         if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id) || $post->post_status === 'auto-draft') {
@@ -5946,14 +6072,15 @@ class Log_Manager_Hooks
         ];
 
         add_action('shutdown', function () use ($field_data) {
-            $this->process_acf_field_update($field_data);
+            $this->sdw_process_acf_field_update($field_data);
         }, 999);
     }
 
     /**
      * Process ACF field update on shutdown
+     * @param array $field_data Field data
      */
-    private function process_acf_field_update($field_data)
+    private function sdw_process_acf_field_update($field_data)
     {
         $field = acf_get_field($field_data['ID']);
         if (!$field || !is_array($field) || !isset($field['label'])) {
@@ -5972,7 +6099,7 @@ class Log_Manager_Hooks
         $action = $field_data['update'] ? 'updated' : 'created';
         $severity = $action === 'created' ? 'notice' : 'info';
 
-        $field_icon = $this->get_field_type_icon($field['type'] ?? 'text');
+        $field_icon = $this->sdw_get_field_type_icon($field['type'] ?? 'text');
 
         $details = [
             'field' => "{$field_icon} {$field['label']}",
@@ -5992,5 +6119,249 @@ class Log_Manager_Hooks
         );
     }
 
+    /**
+     * Check if option change is meaningful
+     * @param string $option_name The option name
+     * @param mixed $old_value The old value
+     * @param mixed $new_value The new value
+     * @return bool Whether change is meaningful
+     */
+    private function sdw_is_meaningful_option_change($option_name, $old_value, $new_value)
+    {
+        // Skip specific noisy options entirely
+        if ($option_name === 'cron') {
+            return $this->sdw_has_meaningful_cron_change($old_value, $new_value);
+        }
 
+        // Skip update checks (plugins, themes, core)
+        if (in_array($option_name, ['update_plugins', 'update_themes', 'update_core'])) {
+            return $this->sdw_has_meaningful_update_change($old_value, $new_value);
+        }
+
+        // Skip transients
+        if (strpos($option_name, '_transient_') === 0 || strpos($option_name, '_site_transient_') === 0) {
+            return false;
+        }
+
+        // Skip rewrite rules (change frequently with permalink updates)
+        if ($option_name === 'rewrite_rules') {
+            return false;
+        }
+
+        // Skip auto-updater locks
+        if ($option_name === 'auto_updater.lock') {
+            return false;
+        }
+
+        // Skip cron execution flag
+        if ($option_name === 'doing_cron') {
+            return false;
+        }
+
+        // Skip recently activated plugins (temp data)
+        if ($option_name === 'recently_activated') {
+            return false;
+        }
+
+        // Skip script compression flag
+        if ($option_name === 'can_compress_scripts') {
+            return false;
+        }
+
+        // Skip theme mods (change with customizer live preview)
+        if (strpos($option_name, 'theme_mods_') === 0) {
+            return false;
+        }
+
+        // Skip any option starting with underscore (usually internal)
+        if (strpos($option_name, '_') === 0) {
+            // Except for _thumbnail_id which we track via featured image hooks
+            if ($option_name !== '_thumbnail_id') {
+                return false;
+            }
+        }
+
+        // Skip widget options (handled by widget-specific logging)
+        if (strpos($option_name, 'widget_') === 0) {
+            return false;
+        }
+
+        // Skip sidebars_widgets (handled separately)
+        if ($option_name === 'sidebars_widgets') {
+            return false;
+        }
+
+        // Skip user roles options (rarely change manually)
+        if (in_array($option_name, ['wp_user_roles', 'user_roles'])) {
+            return false;
+        }
+
+        // Skip authentication salts (only change during setup)
+        if (in_array($option_name, ['auth_salt', 'logged_in_salt', 'nonce_salt', 'nonce_key'])) {
+            return false;
+        }
+
+        // Skip recovery mode emails
+        if ($option_name === 'recovery_mode_email_last_sent') {
+            return false;
+        }
+
+        // Skip term splitting flag
+        if ($option_name === 'finished_splitting_shared_terms') {
+            return false;
+        }
+
+        // Skip fresh site flag
+        if ($option_name === 'fresh_site') {
+            return false;
+        }
+
+        // Skip WooCommerce session data
+        if (strpos($option_name, '_wc_session_') === 0) {
+            return false;
+        }
+
+        // Skip any option with "lock" in the name (usually temp locks)
+        if (strpos($option_name, 'lock') !== false) {
+            return false;
+        }
+
+        // Skip any option with "temp" or "tmp" in the name
+        if (strpos($option_name, 'temp') !== false || strpos($option_name, 'tmp') !== false) {
+            return false;
+        }
+
+        return true; // All other options are meaningful
+    }
+
+    /**
+     * Check if cron change contains meaningful events
+     * @param mixed $old_cron Old cron data
+     * @param mixed $new_cron New cron data
+     * @return bool Whether cron change is meaningful
+     */
+    private function sdw_has_meaningful_cron_change($old_cron, $new_cron)
+    {
+        if (!is_array($old_cron) || !is_array($new_cron)) {
+            return true; // Log if structure changed dramatically
+        }
+
+        // List of system maintenance hooks that create noise
+        $noisy_hooks = [
+            'do_pings',
+            'wp_version_check',
+            'wp_update_plugins',
+            'wp_update_themes',
+            'wp_scheduled_delete',
+            'delete_expired_transients',
+            'wp_scheduled_auto_draft_delete',
+            'wp_privacy_delete_old_export_files',
+            'recovery_mode_clean_expired_keys',
+            'wp_https_detection',
+            'wp_site_health_scheduled_check',
+            'wp_update_user_counts',
+            'wp_maybe_auto_update',
+            'wp_split_shared_term_batch',
+            'wp_force_deleted_post_cleanup',
+            'importer_scheduled_cleanup',
+        ];
+
+        // Get all unique hooks from both arrays
+        $all_hooks = [];
+        foreach ([$old_cron, $new_cron] as $cron_array) {
+            if (!is_array($cron_array))
+                continue;
+
+            foreach ($cron_array as $timestamp => $events) {
+                if (is_array($events)) {
+                    $all_hooks = array_merge($all_hooks, array_keys($events));
+                }
+            }
+        }
+
+        $all_hooks = array_unique($all_hooks);
+
+        // Check if any meaningful (non-noisy) hook exists
+        foreach ($all_hooks as $hook) {
+            $is_noisy = false;
+
+            // Check exact matches
+            if (in_array($hook, $noisy_hooks)) {
+                $is_noisy = true;
+            }
+
+            // Check partial matches (hooks containing these keywords)
+            $noisy_keywords = ['ping', 'transient', 'cleanup', 'delete', 'check', 'update_', 'wp_'];
+            foreach ($noisy_keywords as $keyword) {
+                if (strpos($hook, $keyword) !== false) {
+                    $is_noisy = true;
+                    break;
+                }
+            }
+
+            // If we found at least one non-noisy hook, it's meaningful
+            if (!$is_noisy) {
+                return true;
+            }
+        }
+
+        // Only noisy/system hooks were involved
+        return false;
+    }
+
+    /**
+     * Check if update check contains meaningful changes
+     * @param mixed $old_data Old update data
+     * @param mixed $new_data New update data
+     * @return bool Whether update change is meaningful
+     */
+    private function sdw_has_meaningful_update_change($old_data, $new_data)
+    {
+        if (!is_array($old_data) || !is_array($new_data)) {
+            return true; // Log if structure changed
+        }
+
+        // These keys change frequently and create noise
+        $noisy_keys = [
+            'last_checked',
+            'checked',
+            'translations',
+            'update_plugins',
+            'update_themes',
+            'version_checked',
+            'updates',
+            'response',
+        ];
+
+        // Compare meaningful keys only
+        foreach ($old_data as $key => $old_val) {
+            // Skip noisy keys
+            if (in_array($key, $noisy_keys)) {
+                continue;
+            }
+
+            $new_val = $new_data[$key] ?? null;
+
+            // Compare non-noisy keys
+            if ($this->sdw_values_differ($old_val, $new_val)) {
+                return true;
+            }
+        }
+
+        // Check if any new non-noisy keys were added
+        foreach ($new_data as $key => $new_val) {
+            // Skip noisy keys
+            if (in_array($key, $noisy_keys)) {
+                continue;
+            }
+
+            // If this key didn't exist in old data, it's meaningful
+            if (!isset($old_data[$key])) {
+                return true;
+            }
+        }
+
+        // No meaningful changes found
+        return false;
+    }
 }

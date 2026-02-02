@@ -1,10 +1,14 @@
 <?php
 /**
- * Log Manager Settings - Simple Cron Cleanup
+ * Log Manager settings class file
+ * 
+ * It handle plugin settings menu page. consist of settings such as save upcoming log & cron settings
+ * 
+ * @package Log_Manager
+ * @since 1.0.6
  */
 class Log_Manager_Settings
 {
-
     const OPTION_NAME = 'log_manager_settings';
     const CRON_HOOK = 'log_manager_cleanup_hook';
 
@@ -18,17 +22,28 @@ class Log_Manager_Settings
         'delete_count' => 100,
     ];
 
-    public static function init()
+    /**
+     * Initialize the settings class
+     * 
+     * @return void
+     */
+    public static function sdw_init()
     {
-        add_action('admin_init', [__CLASS__, 'register_settings']);
-        add_action('admin_init', [__CLASS__, 'handle_cron_actions']);
-        add_action(self::CRON_HOOK, [__CLASS__, 'run_cleanup']);
-        add_filter('cron_schedules', [__CLASS__, 'register_custom_schedules']);
+        add_action('admin_init', [__CLASS__, 'sdw_register_settings']);
+        add_action('admin_init', [__CLASS__, 'sdw_handle_cron_actions']);
+        add_action(self::CRON_HOOK, [__CLASS__, 'sdw_run_cleanup']);
+        add_filter('cron_schedules', [__CLASS__, 'sdw_register_custom_schedules']);
     }
 
-    public static function register_custom_schedules($schedules)
+    /**
+     * Register custom cron schedules
+     * 
+     * @param array $schedules Existing cron schedules
+     * @return array Modified cron schedules
+     */
+    public static function sdw_register_custom_schedules($schedules)
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         $days = intval($settings['custom_days']);
 
         if ($days > 0) {
@@ -41,7 +56,12 @@ class Log_Manager_Settings
         return $schedules;
     }
 
-    public static function handle_cron_actions()
+    /**
+     * Handle cron actions from form submission
+     * 
+     * @return void
+     */
+    public static function sdw_handle_cron_actions()
     {
         if (!isset($_POST['option_page']) || $_POST['option_page'] !== 'log_manager_settings_group') {
             return;
@@ -56,16 +76,22 @@ class Log_Manager_Settings
         }
 
         // Get submitted values
-        $settings = self::get_settings_from_post();
+        $settings = self::sdw_get_settings_from_post();
 
         // Clear existing schedule
         wp_clear_scheduled_hook(self::CRON_HOOK);
 
         // Schedule cleanup based on settings
-        self::schedule_cleanup($settings);
+        self::sdw_schedule_cleanup($settings);
     }
 
-    private static function schedule_cleanup($settings)
+    /**
+     * Schedule cleanup based on settings
+     * 
+     * @param array $settings Settings array
+     * @return void
+     */
+    private static function sdw_schedule_cleanup($settings)
     {
         $hook = self::CRON_HOOK;
         $time = $settings['cron_time'];
@@ -73,22 +99,29 @@ class Log_Manager_Settings
 
         switch ($schedule_type) {
             case 'daily':
-                self::schedule_daily_cleanup($hook, $time);
+                self::sdw_schedule_daily_cleanup($hook, $time);
                 break;
 
             case 'custom_range':
                 $days = $settings['custom_days'];
-                self::schedule_custom_range_cleanup($hook, $days, $time);
+                self::sdw_schedule_custom_range_cleanup($hook, $days, $time);
                 break;
 
             case 'specific_date':
                 $date = $settings['cron_specific_date'];
-                self::schedule_specific_date_cleanup($hook, $date, $time);
+                self::sdw_schedule_specific_date_cleanup($hook, $date, $time);
                 break;
         }
     }
 
-    private static function schedule_daily_cleanup($hook, $time)
+    /**
+     * Schedule daily cleanup
+     * 
+     * @param string $hook Cron hook name
+     * @param string $time Time string (HH:MM)
+     * @return void
+     */
+    private static function sdw_schedule_daily_cleanup($hook, $time)
     {
         list($h, $m) = explode(':', $time);
         $tz = wp_timezone();
@@ -102,7 +135,15 @@ class Log_Manager_Settings
         wp_schedule_event($run->getTimestamp(), 'daily', $hook);
     }
 
-    private static function schedule_custom_range_cleanup($hook, $days, $time)
+    /**
+     * Schedule cleanup at custom intervals
+     * 
+     * @param string $hook Cron hook name
+     * @param int $days Number of days between cleanups
+     * @param string $time Time string (HH:MM)
+     * @return void
+     */
+    private static function sdw_schedule_custom_range_cleanup($hook, $days, $time)
     {
         if ($days <= 0) {
             return;
@@ -123,7 +164,15 @@ class Log_Manager_Settings
         wp_schedule_event($run->getTimestamp(), 'log_manager_custom', $hook);
     }
 
-    private static function schedule_specific_date_cleanup($hook, $date, $time)
+    /**
+     * Schedule cleanup on specific date
+     * 
+     * @param string $hook Cron hook name
+     * @param string $date Date string (YYYY-MM-DD)
+     * @param string $time Time string (HH:MM)
+     * @return void
+     */
+    private static function sdw_schedule_specific_date_cleanup($hook, $date, $time)
     {
         if (empty($date)) {
             return;
@@ -137,7 +186,12 @@ class Log_Manager_Settings
         }
     }
 
-    private static function get_settings_from_post()
+    /**
+     * Get settings from POST data
+     * 
+     * @return array Sanitized settings
+     */
+    private static function sdw_get_settings_from_post()
     {
         $defaults = self::$defaults;
         $settings = [];
@@ -153,12 +207,17 @@ class Log_Manager_Settings
         return $settings;
     }
 
-    public static function run_cleanup()
+    /**
+     * Run the cleanup process
+     * 
+     * @return void
+     */
+    public static function sdw_run_cleanup()
     {
         global $wpdb;
         $table_name = $wpdb->prefix . Log_Manager::TABLE_NAME;
 
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
 
         // Get number of logs to delete
         $delete_count = intval($settings['delete_count']);
@@ -181,7 +240,7 @@ class Log_Manager_Settings
         }
 
         // Create backup file
-        self::create_backup($logs_to_delete);
+        self::sdw_create_backup($logs_to_delete);
 
         // Delete logs
         $ids = implode(',', array_map(function ($log) {
@@ -192,7 +251,7 @@ class Log_Manager_Settings
 
         // Reschedule if not specific date
         if ($settings['cron_schedule_type'] !== 'specific_date') {
-            self::schedule_cleanup($settings);
+            self::sdw_schedule_cleanup($settings);
         }
 
         // Log the cleanup action
@@ -212,7 +271,12 @@ class Log_Manager_Settings
         }
     }
 
-    public static function get_next_run_time()
+    /**
+     * Get next cleanup run time
+     * 
+     * @return string Formatted date or 'Not scheduled'
+     */
+    public static function sdw_get_next_run_time()
     {
         $timestamp = wp_next_scheduled(self::CRON_HOOK);
         if ($timestamp) {
@@ -221,7 +285,13 @@ class Log_Manager_Settings
         return 'Not scheduled';
     }
 
-    private static function create_backup($logs)
+    /**
+     * Create backup of logs before deletion
+     * 
+     * @param array $logs Array of log objects to backup
+     * @return void
+     */
+    private static function sdw_create_backup($logs)
     {
         $backup_dir = WP_CONTENT_DIR . '/log-backups/';
 
@@ -241,7 +311,7 @@ class Log_Manager_Settings
         $content .= "========================================\n";
         $content .= "Generated: " . current_time('Y-m-d H:i:s') . "\n";
         $content .= "Total logs deleted: " . count($logs) . "\n";
-        $content .= "Next cleanup: " . self::get_next_run_time() . "\n";
+        $content .= "Next cleanup: " . self::sdw_get_next_run_time() . "\n";
         $content .= "========================================\n\n";
 
         foreach ($logs as $log) {
@@ -278,12 +348,17 @@ class Log_Manager_Settings
         file_put_contents($filepath, $content);
     }
 
-    public static function register_settings()
+    /**
+     * Register WordPress settings
+     * 
+     * @return void
+     */
+    public static function sdw_register_settings()
     {
         register_setting(
             'log_manager_settings_group',
             self::OPTION_NAME,
-            [__CLASS__, 'sanitize_settings']
+            [__CLASS__, 'sdw_sanitize_settings']
         );
 
         // Main settings section
@@ -298,7 +373,7 @@ class Log_Manager_Settings
         add_settings_field(
             'log_destination',
             __('Log Destination', 'log-manager'),
-            [__CLASS__, 'render_log_destination_field'],
+            [__CLASS__, 'sdw_render_log_destination_field'],
             'log-manager-settings',
             'log_manager_main_section'
         );
@@ -307,7 +382,7 @@ class Log_Manager_Settings
         add_settings_field(
             'textfile_path',
             __('Text File Path', 'log-manager'),
-            [__CLASS__, 'render_textfile_path_field'],
+            [__CLASS__, 'sdw_render_textfile_path_field'],
             'log-manager-settings',
             'log_manager_main_section'
         );
@@ -316,7 +391,7 @@ class Log_Manager_Settings
         add_settings_section(
             'log_manager_schedule_section',
             __('Cleanup Schedule', 'log-manager'),
-            [__CLASS__, 'render_schedule_section_description'],
+            [__CLASS__, 'sdw_render_schedule_section_description'],
             'log-manager-settings'
         );
 
@@ -324,7 +399,7 @@ class Log_Manager_Settings
         add_settings_field(
             'cron_schedule_type',
             __('Schedule Type', 'log-manager'),
-            [__CLASS__, 'render_schedule_type_field'],
+            [__CLASS__, 'sdw_render_schedule_type_field'],
             'log-manager-settings',
             'log_manager_schedule_section'
         );
@@ -333,7 +408,7 @@ class Log_Manager_Settings
         add_settings_field(
             'cron_time',
             __('Run Time', 'log-manager'),
-            [__CLASS__, 'render_cron_time_field'],
+            [__CLASS__, 'sdw_render_cron_time_field'],
             'log-manager-settings',
             'log_manager_schedule_section'
         );
@@ -342,7 +417,7 @@ class Log_Manager_Settings
         add_settings_field(
             'custom_days',
             __('Every X Days', 'log-manager'),
-            [__CLASS__, 'render_custom_days_field'],
+            [__CLASS__, 'sdw_render_custom_days_field'],
             'log-manager-settings',
             'log_manager_schedule_section'
         );
@@ -351,7 +426,7 @@ class Log_Manager_Settings
         add_settings_field(
             'cron_specific_date',
             __('Specific Date', 'log-manager'),
-            [__CLASS__, 'render_specific_date_field'],
+            [__CLASS__, 'sdw_render_specific_date_field'],
             'log-manager-settings',
             'log_manager_schedule_section'
         );
@@ -360,13 +435,19 @@ class Log_Manager_Settings
         add_settings_field(
             'delete_count',
             __('Delete Count', 'log-manager'),
-            [__CLASS__, 'render_delete_count_field'],
+            [__CLASS__, 'sdw_render_delete_count_field'],
             'log-manager-settings',
             'log_manager_schedule_section'
         );
     }
 
-    public static function sanitize_settings($input)
+    /**
+     * Sanitize settings input
+     * 
+     * @param array $input Raw input data
+     * @return array Sanitized settings
+     */
+    public static function sdw_sanitize_settings($input)
     {
         $sanitized = [];
 
@@ -403,10 +484,15 @@ class Log_Manager_Settings
         return $sanitized;
     }
 
-    public static function render_schedule_section_description()
+    /**
+     * Render schedule section description
+     * 
+     * @return void
+     */
+    public static function sdw_render_schedule_section_description()
     {
         $next_run = wp_next_scheduled(self::CRON_HOOK);
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
 
         if ($next_run) {
             $time_left = $next_run - time();
@@ -418,7 +504,7 @@ class Log_Manager_Settings
                 $seconds = $time_left % 60;
 
                 echo '<div style="background: #f0f6fc; border-left: 4px solid #2271b1; padding: 15px; margin: 15px 0; border-radius: 4px;">';
-                echo '<h3 style="margin-top: 0; color: #2271b1;">' . __('📅 Scheduled Cleanup Status', 'log-manager') . '</h3>';
+                echo '<h3 style="margin-top: 0; color: #2271b1;">' . __(' Scheduled Cleanup Status', 'log-manager') . '</h3>';
 
                 echo '<div style="display: flex; gap: 30px; flex-wrap: wrap; margin-bottom: 15px;">';
                 echo '<div>';
@@ -491,27 +577,37 @@ class Log_Manager_Settings
         echo '<p>' . __('Configure automatic log cleanup schedule.', 'log-manager') . '</p>';
     }
 
-    public static function render_schedule_type_field()
+    /**
+     * Render schedule type field
+     * 
+     * @return void
+     */
+    public static function sdw_render_schedule_type_field()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         ?>
         <select name="log_manager_settings[cron_schedule_type]" id="cron_schedule_type" style="width: 200px;">
             <option value="daily" <?php selected($settings['cron_schedule_type'], 'daily'); ?>>
-                🕒 <?php _e('Daily', 'log-manager'); ?>
+                 <?php _e('Daily', 'log-manager'); ?>
             </option>
             <option value="custom_range" <?php selected($settings['cron_schedule_type'], 'custom_range'); ?>>
-                🔁 <?php _e('Custom Interval (Every X Days)', 'log-manager'); ?>
+                 <?php _e('Custom Interval (Every X Days)', 'log-manager'); ?>
             </option>
             <option value="specific_date" <?php selected($settings['cron_schedule_type'], 'specific_date'); ?>>
-                📅 <?php _e('Specific Date', 'log-manager'); ?>
+                 <?php _e('Specific Date', 'log-manager'); ?>
             </option>
         </select>
         <?php
     }
 
-    public static function render_cron_time_field()
+    /**
+     * Render cron time field
+     * 
+     * @return void
+     */
+    public static function sdw_render_cron_time_field()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         $type = $settings['cron_schedule_type'];
         ?>
         <div id="time_field" style="<?php echo ($type === 'specific_date') ? '' : ''; ?>">
@@ -522,9 +618,14 @@ class Log_Manager_Settings
         <?php
     }
 
-    public static function render_custom_days_field()
+    /**
+     * Render custom days field
+     * 
+     * @return void
+     */
+    public static function sdw_render_custom_days_field()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         ?>
         <div id="custom_days_field"
             style="<?php echo ($settings['cron_schedule_type'] !== 'custom_range') ? 'display: none;' : ''; ?>">
@@ -536,9 +637,14 @@ class Log_Manager_Settings
         <?php
     }
 
-    public static function render_specific_date_field()
+    /**
+     * Render specific date field
+     * 
+     * @return void
+     */
+    public static function sdw_render_specific_date_field()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         ?>
         <div id="specific_date_field"
             style="<?php echo ($settings['cron_schedule_type'] !== 'specific_date') ? 'display: none;' : ''; ?>">
@@ -551,9 +657,14 @@ class Log_Manager_Settings
         <?php
     }
 
-    public static function render_delete_count_field()
+    /**
+     * Render delete count field
+     * 
+     * @return void
+     */
+    public static function sdw_render_delete_count_field()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         ?>
         <input type="number" name="log_manager_settings[delete_count]"
             value="<?php echo esc_attr($settings['delete_count']); ?>" min="1" max="100000" step="1" style="width: 120px;">
@@ -561,9 +672,14 @@ class Log_Manager_Settings
         <?php
     }
 
-    public static function render_log_destination_field()
+    /**
+     * Render log destination field
+     * 
+     * @return void
+     */
+    public static function sdw_render_log_destination_field()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         $current = $settings['log_destination'] ?? 'database';
 
         ?>
@@ -579,9 +695,14 @@ class Log_Manager_Settings
         <?php
     }
 
-    public static function render_textfile_path_field()
+    /**
+     * Render text file path field
+     * 
+     * @return void
+     */
+    public static function sdw_render_textfile_path_field()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         $current = $settings['textfile_path'] ?? '';
 
         ?>
@@ -598,7 +719,12 @@ class Log_Manager_Settings
         <?php
     }
 
-    public static function render_settings_page()
+    /**
+     * Render the settings page
+     * 
+     * @return void
+     */
+    public static function sdw_render_settings_page()
     {
         ?>
         <div class="wrap">
@@ -644,9 +770,9 @@ class Log_Manager_Settings
             <div style="margin-top: 30px; padding: 15px; background: #f6f7f7; border: 1px solid #ccd0d4;">
                 <h3><?php _e('Schedule Options:', 'log-manager'); ?></h3>
                 <ul style="list-style: disc; margin-left: 20px;">
-                    <li><strong>🕒 Daily:</strong> Delete logs every day at specified time</li>
-                    <li><strong>🔁 Custom Interval:</strong> Delete logs every X days at specified time</li>
-                    <li><strong>📅 Specific Date:</strong> Delete logs once on selected date & time</li>
+                    <li><strong> Daily:</strong> Delete logs every day at specified time</li>
+                    <li><strong> Custom Interval:</strong> Delete logs every X days at specified time</li>
+                    <li><strong> Specific Date:</strong> Delete logs once on selected date & time</li>
                 </ul>
 
                 <h4><?php _e('Backup Files:', 'log-manager'); ?></h4>
@@ -669,21 +795,36 @@ class Log_Manager_Settings
         <?php
     }
 
-    public static function get_settings()
+    /**
+     * Get settings from database
+     * 
+     * @return array Settings array
+     */
+    public static function sdw_get_settings()
     {
         $settings = get_option(self::OPTION_NAME, self::$defaults);
         return wp_parse_args($settings, self::$defaults);
     }
 
-    public static function get_log_destination()
+    /**
+     * Get log destination setting
+     * 
+     * @return string 'database' or 'textfile'
+     */
+    public static function sdw_get_log_destination()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         return $settings['log_destination'];
     }
 
-    public static function get_textfile_path()
+    /**
+     * Get text file path setting
+     * 
+     * @return string Text file path
+     */
+    public static function sdw_get_textfile_path()
     {
-        $settings = self::get_settings();
+        $settings = self::sdw_get_settings();
         return $settings['textfile_path'];
     }
 }

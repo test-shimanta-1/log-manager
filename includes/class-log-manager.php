@@ -1,7 +1,14 @@
 <?php
+/**
+ * Log Manager main class file
+ * 
+ * It handle plugin database initialization, admin page render ui etc.
+ * 
+ * @package Log_Manager
+ * @since 1.0.6
+ */
 class Log_Manager
 {
-
     /**
      * Plugin instance
      */
@@ -26,11 +33,12 @@ class Log_Manager
         'debug'
     ];
 
-
     /**
      * Initialize plugin
+     * 
+     * @return Log_Manager Singleton instance
      */
-    public static function init()
+    public static function sdw_init()
     {
         if (is_null(self::$instance)) {
             self::$instance = new self();
@@ -48,46 +56,55 @@ class Log_Manager
 
     /**
      * Setup WordPress hooks
+     * 
+     * @return void
      */
     private function setup_hooks()
     {
         // Initialize on WordPress init
-        add_action('init', [$this, 'init_plugin']);
+        add_action('init', [$this, 'sdw_init_plugin']);
     }
 
     /**
      * Initialize plugin components
+     * 
+     * @return void
      */
-    public function init_plugin()
+    public function sdw_init_plugin()
     {
         // Initialize hooks handler
         Log_Manager_Hooks::init();
 
-        add_action('admin_init', [__CLASS__, 'handle_post_requests'], 1);
-        add_action('admin_init', [__CLASS__, 'handle_delete_requests'], 1);
+        add_action('admin_init', [__CLASS__, 'sdw_handle_post_requests'], 1);
+        add_action('admin_init', [__CLASS__, 'sdw_handle_delete_requests'], 1);
     }
 
     /**
      * Plugin activation
+     * 
+     * @return void
      */
-    public static function activate()
+    public static function sdw_activate()
     {
         // Create database table
-        self::create_table();
-
+        self::sdw_create_table();
     }
 
     /**
      * Plugin deactivation
+     * 
+     * @return void
      */
-    public static function deactivate()
+    public static function sdw_deactivate()
     {
     }
 
     /**
      * Create database table with optimized indexes
+     * 
+     * @return void
      */
-    private static function create_table()
+    private static function sdw_create_table()
     {
         global $wpdb;
 
@@ -123,24 +140,40 @@ class Log_Manager
 
     /**
      * Log an activity with HTML support
+     * 
+     * @param string $action Action performed
+     * @param string $object_type Type of object
+     * @param int $object_id Object ID
+     * @param string $object_name Object name
+     * @param array $details Additional details
+     * @param string $severity Severity level
+     * @return bool|int Result of logging operation
      */
-    public static function log($action, $object_type = '', $object_id = 0, $object_name = '', $details = [], $severity = 'info')
+    public static function sdw_log($action, $object_type = '', $object_id = 0, $object_name = '', $details = [], $severity = 'info')
     {
         // Get log destination from settings
         $destination = Log_Manager_Settings::get_log_destination();
 
         // Call appropriate logging method
         if ($destination === 'textfile') {
-            return self::log_to_textfile($action, $object_type, $object_id, $object_name, $details, $severity);
+            return self::sdw_log_to_textfile($action, $object_type, $object_id, $object_name, $details, $severity);
         } else {
-            return self::log_to_database($action, $object_type, $object_id, $object_name, $details, $severity);
+            return self::sdw_log_to_database($action, $object_type, $object_id, $object_name, $details, $severity);
         }
     }
 
     /**
      * Log to database (your existing database code)
+     * 
+     * @param string $action Action performed
+     * @param string $object_type Type of object
+     * @param int $object_id Object ID
+     * @param string $object_name Object name
+     * @param array $details Additional details
+     * @param string $severity Severity level
+     * @return bool|int Result of database insertion
      */
-    private static function log_to_database($action, $object_type = '', $object_id = 0, $object_name = '', $details = [], $severity = 'info')
+    private static function sdw_log_to_database($action, $object_type = '', $object_id = 0, $object_name = '', $details = [], $severity = 'info')
     {
         global $wpdb;
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -162,7 +195,7 @@ class Log_Manager
 
         $data = [
             'user_id' => get_current_user_id() ?: 0,
-            'user_ip' => self::get_user_ip(),
+            'user_ip' => self::sdw_get_user_ip(),
             'severity' => $severity,
             'action' => sanitize_text_field($action),
             'object_type' => sanitize_text_field($object_type),
@@ -185,8 +218,16 @@ class Log_Manager
 
     /**
      * Log to text file - SIMPLE VERSION
+     * 
+     * @param string $action Action performed
+     * @param string $object_type Type of object
+     * @param int $object_id Object ID
+     * @param string $object_name Object name
+     * @param array $details Additional details
+     * @param string $severity Severity level
+     * @return bool Success of file write operation
      */
-    private static function log_to_textfile($action, $object_type = '', $object_id = 0, $object_name = '', $details = [], $severity = 'info')
+    private static function sdw_log_to_textfile($action, $object_type = '', $object_id = 0, $object_name = '', $details = [], $severity = 'info')
     {
         $folder_path = Log_Manager_Settings::get_textfile_path();
 
@@ -217,7 +258,7 @@ class Log_Manager
         $timestamp = current_time('Y-m-d H:i:s');
         $user_id = get_current_user_id();
         $user_info = $user_id ? get_userdata($user_id)->user_login : 'System';
-        $ip = self::get_user_ip();
+        $ip = self::sdw_get_user_ip();
 
         // Format details as JSON
         $details_json = !empty($details) ? json_encode($details, JSON_UNESCAPED_UNICODE) : '{}';
@@ -247,11 +288,15 @@ class Log_Manager
         return true;
     }
 
-
     /**
      * Get logs with pagination and HTML support
+     * 
+     * @param int $page Page number
+     * @param int $per_page Items per page
+     * @param array $filters Filter criteria
+     * @return array Logs data with pagination info
      */
-    public static function get_logs($page = 1, $per_page = 50, $filters = [])
+    public static function sdw_get_logs($page = 1, $per_page = 50, $filters = [])
     {
         global $wpdb;
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -353,8 +398,11 @@ class Log_Manager
 
     /**
      * Get logs count with filters
+     * 
+     * @param array $filters Filter criteria
+     * @return int Number of logs matching filters
      */
-    public static function get_logs_count($filters = [])
+    public static function sdw_get_logs_count($filters = [])
     {
         global $wpdb;
 
@@ -400,8 +448,12 @@ class Log_Manager
 
     /**
      * Get logs grouped by action
+     * 
+     * @param int $page Page number
+     * @param int $per_page Items per page
+     * @return array Logs grouped by action
      */
-    public static function get_logs_by_action($page = 1, $per_page = 10)
+    public static function sdw_get_logs_by_action($page = 1, $per_page = 10)
     {
         global $wpdb;
 
@@ -423,8 +475,12 @@ class Log_Manager
 
     /**
      * Get logs grouped by user
+     * 
+     * @param int $page Page number
+     * @param int $per_page Items per page
+     * @return array Logs grouped by user
      */
-    public static function get_logs_by_user($page = 1, $per_page = 10)
+    public static function sdw_get_logs_by_user($page = 1, $per_page = 10)
     {
         global $wpdb;
 
@@ -447,8 +503,10 @@ class Log_Manager
 
     /**
      * Get user IP address
+     * 
+     * @return string User IP address
      */
-    private static function get_user_ip()
+    private static function sdw_get_user_ip()
     {
         $ip = '';
 
@@ -466,8 +524,10 @@ class Log_Manager
 
     /**
      * Get activity summary
+     * 
+     * @return array Summary statistics
      */
-    public static function get_summary()
+    public static function sdw_get_summary()
     {
         global $wpdb;
 
@@ -496,18 +556,19 @@ class Log_Manager
         ];
     }
 
-
     /**
      * Add admin menu
+     * 
+     * @return void
      */
-    public static function add_admin_menu()
+    public static function sdw_add_admin_menu()
     {
         add_menu_page(
             __('Log Manager', 'log-manager'),
             __('Log Manager', 'log-manager'),
             'manage_options',
             'log-manager',
-            [__CLASS__, 'render_admin_page'],
+            [__CLASS__, 'sdw_render_admin_page'],
             'dashicons-tide',
             30
         );
@@ -518,14 +579,16 @@ class Log_Manager
             __('Settings', 'log-manager'),
             'manage_options',
             'log-manager-settings',
-            ['Log_Manager_Settings', 'render_settings_page']  // ← Use Settings class
+            ['Log_Manager_Settings', 'sdw_render_settings_page']  // ← Use Settings class
         );
     }
 
     /**
      * Render admin page
+     * 
+     * @return void
      */
-    public static function render_admin_page()
+    public static function sdw_render_admin_page()
     {
         // Initialize filters array
         $filters = [];
@@ -594,12 +657,12 @@ class Log_Manager
         }
 
         // Get logs with pagination
-        $logs_data = self::get_logs($current_page, $per_page, $filters);
+        $logs_data = self::sdw_get_logs($current_page, $per_page, $filters);
         $logs = $logs_data['logs'];
         $total_logs = $logs_data['total'];
         $total_pages = ceil($total_logs / $per_page);
 
-        $summary = self::get_summary();
+        $summary = self::sdw_get_summary();
 
         // Get unique actions for filter
         global $wpdb;
@@ -648,170 +711,169 @@ class Log_Manager
 
             <!-- Filters -->
             <div class="log-manager-filters"
-                style="background: #fff; padding: 20px; margin: 20px 0; border: 1px solid #ccd0d4; border-radius: 4px;">
-                <h3 style="margin-top: 0;"><?php _e('Filter Logs', 'log-manager'); ?></h3>
-                <form method="post" action="<?php echo admin_url('admin.php?page=log-manager'); ?>">
-                    <?php wp_nonce_field('log_manager_filter', 'log_manager_filter_nonce'); ?>
-                    <input type="hidden" name="log_manager_filter" value="1">
-
-                    <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 15px;">
-                        <div>
-                            <label for="severity" style="display: block; margin-bottom: 5px; font-weight: 600;">
-                                <?php _e('Severity:', 'log-manager'); ?>
-                            </label>
-                            <select name="severity" id="severity" style="width: 100%;">
-                                <option value=""><?php _e('All Severities', 'log-manager'); ?></option>
-                                <?php foreach (self::SEVERITY_LEVELS as $level): ?>
-                                    <option value="<?php echo esc_attr($level); ?>" <?php selected(!empty($filters['severity']) && $filters['severity'] === $level); ?>>
-                                        <?php echo esc_html(ucfirst($level)); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label for="user_id" style="display: block; margin-bottom: 5px; font-weight: 600;">
-                                <?php _e('User:', 'log-manager'); ?>
-                            </label>
-                            <?php
-                            wp_dropdown_users([
-                                'name' => 'user_id',
-                                'show_option_all' => __('All Users', 'log-manager'),
-                                'selected' => !empty($filters['user_id']) ? $filters['user_id'] : 0,
-                                'include_selected' => true,
-                                'style' => 'width: 100%;'
-                            ]);
-                            ?>
-                        </div>
-
-                        <div>
-                            <label for="action" style="display: block; margin-bottom: 5px; font-weight: 600;">
-                                <?php _e('Action:', 'log-manager'); ?>
-                            </label>
-                            <select name="action" id="action" style="width: 100%;">
-                                <option value=""><?php _e('All Actions', 'log-manager'); ?></option>
-                                <?php foreach ($actions as $action): ?>
-                                    <option value="<?php echo esc_attr($action); ?>" <?php selected(!empty($filters['action']) && $filters['action'] === $action); ?>>
-                                        <?php echo esc_html(self::format_action($action)); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label for="object_type" style="display: block; margin-bottom: 5px; font-weight: 600;">
-                                <?php _e('Object Type:', 'log-manager'); ?>
-                            </label>
-                            <select name="object_type" id="object_type" style="width: 100%;">
-                                <option value=""><?php _e('All Types', 'log-manager'); ?></option>
-                                <?php foreach ($object_types as $type): ?>
-                                    <option value="<?php echo esc_attr($type); ?>" <?php selected(!empty($filters['object_type']) && $filters['object_type'] === $type); ?>>
-                                        <?php echo esc_html(ucfirst($type)); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label for="date_from" style="display: block; margin-bottom: 5px; font-weight: 600;">
-                                <?php _e('Date From:', 'log-manager'); ?>
-                            </label>
-                            <input type="date" name="date_from" id="date_from"
-                                value="<?php echo !empty($filters['date_from']) ? esc_attr($filters['date_from']) : ''; ?>"
-                                style="width: 100%;">
-                        </div>
-
-                        <div>
-                            <label for="date_to" style="display: block; margin-bottom: 5px; font-weight: 600;">
-                                <?php _e('Date To:', 'log-manager'); ?>
-                            </label>
-                            <input type="date" name="date_to" id="date_to"
-                                value="<?php echo !empty($filters['date_to']) ? esc_attr($filters['date_to']) : ''; ?>"
-                                style="width: 100%;">
-                        </div>
-                    </div>
-
-                    <div style="display: flex; gap: 20px; align-items: flex-end;">
-                        <div style="flex: 1;">
-                            <label for="search" style="display: block; margin-bottom: 5px; font-weight: 600;">
-                                <?php _e('Search:', 'log-manager'); ?>
-                            </label>
-                            <input type="text" name="search" id="search"
-                                value="<?php echo !empty($filters['search']) ? esc_attr($filters['search']) : ''; ?>"
-                                placeholder="<?php esc_attr_e('Search logs...', 'log-manager'); ?>" style="width: 100%;">
-                        </div>
-
-                        <div>
-                            <label for="per_page" style="display: block; margin-bottom: 5px; font-weight: 600;">
-                                <?php _e('Logs per page:', 'log-manager'); ?>
-                            </label>
-                            <select name="per_page" id="per_page" style="width: 120px;">
-                                <?php foreach ($per_page_options as $option): ?>
-                                    <option value="<?php echo esc_attr($option); ?>" <?php selected($per_page, $option); ?>>
-                                        <?php echo esc_html($option); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div>
-                            <button type="submit" name="apply_filters" class="button button-primary"
-                                style="margin-bottom: 5px;">
-                                <?php _e('Apply Filters', 'log-manager'); ?>
-                            </button>
-                            <button type="submit" name="reset_filters" class="button" onclick="resetForm(event)">
-                                <?php _e('Reset', 'log-manager'); ?>
-                            </button>
-                        </div>
-
-                        <div style="border-left: 1px solid #dcdcde; padding-left: 15px;">
-                            <span style="display: block; margin-bottom: 5px; font-weight: 600; color: #646970;">
-                                <?php _e('Export:', 'log-manager'); ?>
-                            </span>
-                            <div style="display: flex; gap: 10px;">
-                                <!-- Export buttons (still use GET with current filters) -->
-                                <a href="<?php
-                                echo wp_nonce_url(
-                                    add_query_arg(
-                                        array_merge(
-                                            ['export_type' => 'csv', 'page' => 'log-manager'],
-                                            $filters
-                                        ),
-                                        admin_url('admin.php')
-                                    ),
-                                    'log_manager_export'
-                                );
-                                ?>" class="button" style="background: #00a32a; border-color: #00a32a; color: white;">
-                                    <span class="dashicons dashicons-media-spreadsheet"
-                                        style="vertical-align: middle; margin-right: 5px;"></span>
-                                    <?php _e('Export CSV', 'log-manager'); ?>
-                                </a>
-
-                                <a href="<?php
-                                echo wp_nonce_url(
-                                    add_query_arg(
-                                        array_merge(
-                                            ['export_type' => 'pdf', 'page' => 'log-manager'],
-                                            $filters
-                                        ),
-                                        admin_url('admin.php')
-                                    ),
-                                    'log_manager_export'
-                                );
-                                ?>" class="button" style="background: #d63638; border-color: #d63638; color: white;">
-                                    <span class="dashicons dashicons-media-document"
-                                        style="vertical-align: middle; margin-right: 5px;"></span>
-                                    <?php _e('Export PDF', 'log-manager'); ?>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Hidden current page field -->
-                    <input type="hidden" name="paged" value="<?php echo esc_attr($current_page); ?>">
-                </form>
+    style="background: #fff; padding: 12px; margin: 20px 0; border: 1px solid #ccd0d4; border-radius: 4px;">
+    
+    <form method="post" action="<?php echo admin_url('admin.php?page=log-manager'); ?>">
+        <?php wp_nonce_field('log_manager_filter', 'log_manager_filter_nonce'); ?>
+        <input type="hidden" name="log_manager_filter" value="1">
+        
+        <!-- Single row layout -->
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+            
+            <!-- Severity -->
+            <div style="min-width: 100px;">
+                <label for="severity" style="display: block; margin-bottom: 3px; font-size: 11px; font-weight: 600; color: #646970;">
+                    <?php _e('Severity', 'log-manager'); ?>
+                </label>
+                <select name="severity" id="severity" style="width: 100%; padding: 5px; font-size: 12px; height: 32px;">
+                    <option value=""><?php _e('All', 'log-manager'); ?></option>
+                    <?php foreach (self::SEVERITY_LEVELS as $level): ?>
+                        <option value="<?php echo esc_attr($level); ?>" <?php selected(!empty($filters['severity']) && $filters['severity'] === $level); ?>>
+                            <?php echo esc_html(ucfirst($level)); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
+            
+            <!-- User -->
+            <div style="min-width: 120px;">
+                <label for="user_id" style="display: block; margin-bottom: 3px; font-size: 11px; font-weight: 600; color: #646970;">
+                    <?php _e('User', 'log-manager'); ?>
+                </label>
+                <?php
+                wp_dropdown_users([
+                    'name' => 'user_id',
+                    'show_option_all' => __('All Users', 'log-manager'),
+                    'selected' => !empty($filters['user_id']) ? $filters['user_id'] : 0,
+                    'include_selected' => true,
+                    'style' => 'width: 100%; padding: 5px; font-size: 12px; height: 32px;'
+                ]);
+                ?>
+            </div>
+            
+            <!-- Action -->
+            <div style="min-width: 120px;">
+                <label for="action" style="display: block; margin-bottom: 3px; font-size: 11px; font-weight: 600; color: #646970;">
+                    <?php _e('Action', 'log-manager'); ?>
+                </label>
+                <select name="action" id="action" style="width: 100%; padding: 5px; font-size: 12px; height: 32px;">
+                    <option value=""><?php _e('All', 'log-manager'); ?></option>
+                    <?php foreach ($actions as $action): ?>
+                        <option value="<?php echo esc_attr($action); ?>" <?php selected(!empty($filters['action']) && $filters['action'] === $action); ?>>
+                            <?php echo esc_html(self::sdw_format_action($action)); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <!-- Object Type -->
+            <div style="min-width: 100px;">
+                <label for="object_type" style="display: block; margin-bottom: 3px; font-size: 11px; font-weight: 600; color: #646970;">
+                    <?php _e('Type', 'log-manager'); ?>
+                </label>
+                <select name="object_type" id="object_type" style="width: 100%; padding: 5px; font-size: 12px; height: 32px;">
+                    <option value=""><?php _e('All', 'log-manager'); ?></option>
+                    <?php foreach ($object_types as $type): ?>
+                        <option value="<?php echo esc_attr($type); ?>" <?php selected(!empty($filters['object_type']) && $filters['object_type'] === $type); ?>>
+                            <?php echo esc_html(ucfirst($type)); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <!-- Date Range -->
+            <div style="min-width: 160px;">
+                <label for="date_from" style="display: block; margin-bottom: 3px; font-size: 11px; font-weight: 600; color: #646970;">
+                    <?php _e('Date Range', 'log-manager'); ?>
+                </label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="date" name="date_from" id="date_from"
+                        value="<?php echo !empty($filters['date_from']) ? esc_attr($filters['date_from']) : ''; ?>"
+                        style="width: 70px; padding: 5px; font-size: 12px; height: 32px;">
+                    <span style="color: #8c8f94; align-self: center;">→</span>
+                    <input type="date" name="date_to" id="date_to"
+                        value="<?php echo !empty($filters['date_to']) ? esc_attr($filters['date_to']) : ''; ?>"
+                        style="width: 70px; padding: 5px; font-size: 12px; height: 32px;">
+                </div>
+            </div>
+            
+            <!-- Search -->
+            <div style="flex: 1; min-width: 150px;">
+                <label for="search" style="display: block; margin-bottom: 3px; font-size: 11px; font-weight: 600; color: #646970;">
+                    <?php _e('Search', 'log-manager'); ?>
+                </label>
+                <input type="text" name="search" id="search"
+                    value="<?php echo !empty($filters['search']) ? esc_attr($filters['search']) : ''; ?>"
+                    placeholder="<?php esc_attr_e('Search...', 'log-manager'); ?>"
+                    style="width: 100%; padding: 5px; font-size: 12px; height: 32px;">
+            </div>
+            
+            <!-- Per Page -->
+            <div style="min-width: 80px;">
+                <label for="per_page" style="display: block; margin-bottom: 3px; font-size: 11px; font-weight: 600; color: #646970;">
+                    <?php _e('Per Page', 'log-manager'); ?>
+                </label>
+                <select name="per_page" id="per_page" style="width: 100%; padding: 5px; font-size: 12px; height: 32px;">
+                    <?php foreach ($per_page_options as $option): ?>
+                        <option value="<?php echo esc_attr($option); ?>" <?php selected($per_page, $option); ?>>
+                            <?php echo esc_html($option); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <!-- Filter Buttons -->
+            <div style="display: flex; gap: 5px; align-items: flex-end;">
+                <button type="submit" name="apply_filters" class="button button-primary" 
+                    style="padding: 6px 10px; font-size: 12px; height: 32px; white-space: nowrap;">
+                    <?php _e('Filter', 'log-manager'); ?>
+                </button>
+                <button type="submit" name="reset_filters" class="button" 
+                    style="padding: 6px 10px; font-size: 12px; height: 32px; white-space: nowrap;" onclick="resetForm(event)">
+                    <?php _e('Reset', 'log-manager'); ?>
+                </button>
+            </div>
+            
+            <!-- Export Buttons (smaller) -->
+            <div style="display: flex; gap: 5px; align-items: flex-end;">
+                <a href="<?php
+                    echo wp_nonce_url(
+                        add_query_arg(
+                            array_merge(
+                                ['export_type' => 'csv', 'page' => 'log-manager'],
+                                $filters
+                            ),
+                            admin_url('admin.php')
+                        ),
+                        'log_manager_export'
+                    );
+                ?>" class="button" style="background: #00a32a; border-color: #00a32a; color: white; padding: 6px 8px; font-size: 11px; height: 32px;">
+                    <span class="dashicons dashicons-media-spreadsheet" style="vertical-align: middle; margin-right: 3px; font-size: 13px;"></span>
+                    <?php _e('CSV', 'log-manager'); ?>
+                </a>
+                
+                <a href="<?php
+                    echo wp_nonce_url(
+                        add_query_arg(
+                            array_merge(
+                                ['export_type' => 'pdf', 'page' => 'log-manager'],
+                                $filters
+                            ),
+                            admin_url('admin.php')
+                        ),
+                        'log_manager_export'
+                    );
+                ?>" class="button" style="background: #d63638; border-color: #d63638; color: white; padding: 6px 8px; font-size: 11px; height: 32px;">
+                    <span class="dashicons dashicons-media-document" style="vertical-align: middle; margin-right: 3px; font-size: 13px;"></span>
+                    <?php _e('PDF', 'log-manager'); ?>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Hidden current page field -->
+        <input type="hidden" name="paged" value="<?php echo esc_attr($current_page); ?>">
+    </form>
+</div>
 
             <!-- Logs Table with bottom-left pagination -->
             <div style="position: relative;">
@@ -889,46 +951,46 @@ class Log_Manager
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <code><?php echo esc_html(self::format_action($log->action)); ?></code>
+                                                <code><?php echo esc_html(self::sdw_format_action($log->action)); ?></code>
                                             </td>
                                             <td>
                                                 <?php
                                                 $object_text = '';
                                                 if ($log->object_id > 0) {
                                                     if ($log->object_type === 'post') {
-                                                        $object_text = '📝 Post #' . $log->object_id;
+                                                        $object_text = ' Post #' . $log->object_id;
                                                         $edit_url = get_edit_post_link($log->object_id);
                                                         if ($edit_url) {
-                                                            $object_text = '<a href="' . esc_url($edit_url) . '" target="_blank">📝 Post #' . $log->object_id . '</a>';
+                                                            $object_text = '<a href="' . esc_url($edit_url) . '" target="_blank"> Post #' . $log->object_id . '</a>';
                                                         }
                                                     } elseif ($log->object_type === 'user') {
-                                                        $object_text = '👤 User #' . $log->object_id;
+                                                        $object_text = ' User #' . $log->object_id;
                                                         $edit_url = get_edit_user_link($log->object_id);
                                                         if ($edit_url) {
-                                                            $object_text = '<a href="' . esc_url($edit_url) . '" target="_blank">👤 User #' . $log->object_id . '</a>';
+                                                            $object_text = '<a href="' . esc_url($edit_url) . '" target="_blank"> User #' . $log->object_id . '</a>';
                                                         }
                                                     } elseif ($log->object_type === 'attachment') {
-                                                        $object_text = '🖼️ Media #' . $log->object_id;
+                                                        $object_text = ' Media #' . $log->object_id;
                                                     } elseif ($log->object_type === 'comment') {
-                                                        $object_text = '💬 Comment #' . $log->object_id;
+                                                        $object_text = ' Comment #' . $log->object_id;
                                                     } elseif ($log->object_type === 'term') {
-                                                        $object_text = '🏷️ Term #' . $log->object_id;
+                                                        $object_text = ' Term #' . $log->object_id;
                                                     } elseif ($log->object_type === 'revision') {
-                                                        $object_text = '📚 Revision #' . $log->object_id;
+                                                        $object_text = ' Revision #' . $log->object_id;
                                                     } else {
                                                         $object_text = ucfirst($log->object_type) . ' #' . $log->object_id;
                                                     }
                                                 } else {
                                                     if ($log->object_type === 'plugin') {
-                                                        $object_text = '🔌 ' . $log->object_name;
+                                                        $object_text = ' ' . $log->object_name;
                                                     } elseif ($log->object_type === 'theme') {
-                                                        $object_text = '🎨 ' . $log->object_name;
+                                                        $object_text = ' ' . $log->object_name;
                                                     } elseif ($log->object_type === 'option') {
-                                                        $object_text = '⚙️ ' . $log->object_name;
+                                                        $object_text = ' ' . $log->object_name;
                                                     } elseif ($log->object_type === 'widget') {
-                                                        $object_text = '🧩 ' . $log->object_name;
+                                                        $object_text = ' ' . $log->object_name;
                                                     } elseif ($log->object_type === 'acf') {
-                                                        $object_text = '🔧 ' . $log->object_name;
+                                                        $object_text = ' ' . $log->object_name;
                                                     } else {
                                                         $object_text = $log->object_name ?: ucfirst($log->object_type ?: 'System');
                                                     }
@@ -938,7 +1000,7 @@ class Log_Manager
                                             </td>
                                             <td>
                                                 <?php if ($details): ?>
-                                                    <?php echo self::format_details_display($details); ?>
+                                                    <?php echo self::sdw_format_details_display($details); ?>
                                                 <?php else: ?>
                                                     <em><?php _e('No details', 'log-manager'); ?></em>
                                                 <?php endif; ?>
@@ -1571,66 +1633,69 @@ class Log_Manager
 
     /**
      * Format action for display
+     * 
+     * @param string $action Action string
+     * @return string Formatted action label
      */
-    public static function format_action($action)
+    public static function sdw_format_action($action)
     {
         $actions = [
-            'post_created' => '📝 Post Created',
-            'post_updated' => '✏️ Post Updated',
-            'post_deleted' => '🗑️ Post Deleted',
-            'post_trashed' => '🗑️ Post Trashed',
-            'post_untrashed' => '↩️ Post Restored',
-            'featured_image_added' => '🖼️ Featured Image Added',
-            'featured_image_changed' => '🖼️ Featured Image Changed',
-            'featured_image_removed' => '🖼️ Featured Image Removed',
-            'revision_created' => '📚 Revision Created',
-            'user_registered' => '👤 User Registered',
-            'user_updated' => '✏️ User Updated',
-            'user_login' => '🔐 User Login',
-            'user_logout' => '🔓 User Logout',
-            'password_reset' => '🔑 Password Reset',
-            'password_changed' => '🔑 Password Changed',
-            'password_reset_requested' => '🔑 Password Reset Requested',
-            'user_role_changed' => '👑 User Role Changed',
-            'user_meta_updated' => '👤 User Meta Updated',
-            'user_meta_added' => '👤 User Meta Added',
-            'user_meta_deleted' => '👤 User Meta Deleted',
-            'option_updated' => '⚙️ Setting Updated',
-            'plugin_activated' => '🔌 Plugin Activated',
-            'plugin_deactivated' => '🔌 Plugin Deactivated',
-            'plugin_deleted' => '🔌 Plugin Deleted',
-            'theme_switched' => '🎨 Theme Switched',
-            'comment_posted' => '💬 Comment Posted',
-            'comment_edited' => '✏️ Comment Edited',
-            'comment_deleted' => '🗑️ Comment Deleted',
-            'media_added' => '🖼️ Media Added',
-            'media_edited' => '✏️ Media Edited',
-            'media_deleted' => '🗑️ Media Deleted',
-            'term_created' => '🏷️ Term Created',
-            'term_updated' => '✏️ Term Updated',
-            'term_deleted' => '🗑️ Term Deleted',
-            'taxonomy_updated' => '🏷️ Taxonomy Updated',
-            'widget_updated' => '🧩 Widget Updated',
-            'widgets_rearranged' => '🧩 Widgets Rearranged',
-            'import_started' => '📥 Import Started',
-            'import_completed' => '📥 Import Completed',
-            'export_started' => '📤 Export Started',
-            'acf_fields_updated' => '🔧 ACF Fields Updated',
-            'acf_field_group_updated' => '🔧 ACF Field Group Updated',
-            'acf_field_group_duplicated' => '🔧 ACF Field Group Duplicated',
-            'acf_field_group_deleted' => '🔧 ACF Field Group Deleted',
-            'term_meta_updated' => '🏷️ Term Meta Updated',
-            'term_meta_added' => '🏷️ Term Meta Added',
-            'term_meta_deleted' => '🏷️ Term Meta Deleted',
-            'post_meta_updated' => '📝 Post Meta Updated',
-            'post_meta_added' => '📝 Post Meta Added',
-            'post_meta_deleted' => '📝 Post Meta Deleted',
-            'menu_updated' => '📋 Menu Updated',
-            'menu_created' => '📋 Menu Created',
-            'menu_deleted' => '📋 Menu Deleted',
-            'sidebar_widgets_updated' => '🧩 Sidebar Widgets Updated',
-            'customizer_saved' => '🎨 Customizer Saved',
-            'login_failed' => '🔒 Login Failed',
+            'post_created' => ' Post Created',
+            'post_updated' => ' Post Updated',
+            'post_deleted' => ' Post Deleted',
+            'post_trashed' => ' Post Trashed',
+            'post_untrashed' => ' Post Restored',
+            'featured_image_added' => ' Featured Image Added',
+            'featured_image_changed' => ' Featured Image Changed',
+            'featured_image_removed' => ' Featured Image Removed',
+            'revision_created' => ' Revision Created',
+            'user_registered' => ' User Registered',
+            'user_updated' => ' User Updated',
+            'user_login' => ' User Login',
+            'user_logout' => ' User Logout',
+            'password_reset' => ' Password Reset',
+            'password_changed' => ' Password Changed',
+            'password_reset_requested' => ' Password Reset Requested',
+            'user_role_changed' => ' User Role Changed',
+            'user_meta_updated' => ' User Meta Updated',
+            'user_meta_added' => ' User Meta Added',
+            'user_meta_deleted' => ' User Meta Deleted',
+            'option_updated' => ' Setting Updated',
+            'plugin_activated' => ' Plugin Activated',
+            'plugin_deactivated' => ' Plugin Deactivated',
+            'plugin_deleted' => ' Plugin Deleted',
+            'theme_switched' => ' Theme Switched',
+            'comment_posted' => ' Comment Posted',
+            'comment_edited' => ' Comment Edited',
+            'comment_deleted' => ' Comment Deleted',
+            'media_added' => ' Media Added',
+            'media_edited' => ' Media Edited',
+            'media_deleted' => ' Media Deleted',
+            'term_created' => ' Term Created',
+            'term_updated' => ' Term Updated',
+            'term_deleted' => ' Term Deleted',
+            'taxonomy_updated' => ' Taxonomy Updated',
+            'widget_updated' => ' Widget Updated',
+            'widgets_rearranged' => ' Widgets Rearranged',
+            'import_started' => ' Import Started',
+            'import_completed' => ' Import Completed',
+            'export_started' => ' Export Started',
+            'acf_fields_updated' => ' ACF Fields Updated',
+            'acf_field_group_updated' => ' ACF Field Group Updated',
+            'acf_field_group_duplicated' => ' ACF Field Group Duplicated',
+            'acf_field_group_deleted' => ' ACF Field Group Deleted',
+            'term_meta_updated' => ' Term Meta Updated',
+            'term_meta_added' => ' Term Meta Added',
+            'term_meta_deleted' => ' Term Meta Deleted',
+            'post_meta_updated' => ' Post Meta Updated',
+            'post_meta_added' => ' Post Meta Added',
+            'post_meta_deleted' => ' Post Meta Deleted',
+            'menu_updated' => ' Menu Updated',
+            'menu_created' => ' Menu Created',
+            'menu_deleted' => ' Menu Deleted',
+            'sidebar_widgets_updated' => ' Sidebar Widgets Updated',
+            'customizer_saved' => ' Customizer Saved',
+            'login_failed' => ' Login Failed',
         ];
 
         return $actions[$action] ?? ucwords(str_replace('_', ' ', $action));
@@ -1638,8 +1703,11 @@ class Log_Manager
 
     /**
      * Get object display text
+     * 
+     * @param object $log Log object
+     * @return string Formatted object text
      */
-    public static function get_object_display_text($log)
+    public static function sdw_get_object_display_text($log)
     {
         if ($log->object_id > 0) {
             if ($log->object_type === 'post') {
@@ -1658,8 +1726,11 @@ class Log_Manager
 
     /**
      * Format details for display with HTML support
+     * 
+     * @param array $details Details array
+     * @return string HTML formatted details
      */
-    private static function format_details_display($details)
+    private static function sdw_format_details_display($details)
     {
         if (empty($details) || !is_array($details)) {
             return '<em>' . __('No details', 'log-manager') . '</em>';
@@ -1690,7 +1761,7 @@ class Log_Manager
 
             // Special beautiful rendering for content changes
             if ($key === 'content' && is_array($value)) {
-                $output .= self::render_beautiful_content_changes($value);
+                $output .= self::sdw_render_beautiful_content_changes($value);
                 continue;
             }
 
@@ -1731,13 +1802,13 @@ class Log_Manager
         return $output;
     }
 
-
     /**
      * Render settings page
+     * 
+     * @return void
      */
-    public static function render_settings_page()
+    public static function sdw_render_settings_page()
     {
-
         ?>
         <div class="wrap">
             <h1><?php _e('Log Manager Settings', 'log-manager'); ?></h1>
@@ -1747,8 +1818,11 @@ class Log_Manager
 
     /**
      * Beautiful rendering of content change details
+     * 
+     * @param array $data Content change data
+     * @return string HTML formatted content changes
      */
-    private static function render_beautiful_content_changes($data)
+    private static function sdw_render_beautiful_content_changes($data)
     {
         $output = '<div class="content-change-box">';
 
@@ -1790,7 +1864,7 @@ class Log_Manager
             // Modified lines
             if (!empty($dc['modified'])) {
                 $output .= '<div class="diff-section modified">';
-                $output .= '<div class="diff-title">✏️ Modified lines</div>';
+                $output .= '<div class="diff-title"> Modified lines</div>';
 
                 foreach (array_slice($dc['modified'], 0, 4) as $mod) {  // limit to 4 for space
                     $output .= '<div class="mod-line">';
@@ -1811,7 +1885,7 @@ class Log_Manager
         if (!empty($data['word_changes']['added_words']['count'])) {
             $aw = $data['word_changes']['added_words'];
             $output .= '<div class="word-summary">';
-            $output .= '➕ ' . $aw['count'] . ' new words (e.g. "' . esc_html(substr($aw['sample'] ?? '', 0, 80)) . '…")';
+            $output .= ' ' . $aw['count'] . ' new words (e.g. "' . esc_html(substr($aw['sample'] ?? '', 0, 80)) . '…")';
             $output .= '</div>';
         }
 
@@ -1820,11 +1894,12 @@ class Log_Manager
         return $output;
     }
 
-
     /**
      * Handle POST filter requests early
+     * 
+     * @return void
      */
-    public static function handle_post_requests()
+    public static function sdw_handle_post_requests()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['log_manager_filter'])) {
             return;
@@ -1884,11 +1959,13 @@ class Log_Manager
         exit;
     }
 
-
     /**
      * Delete single log by ID
+     * 
+     * @param int $log_id Log ID to delete
+     * @return bool|int Result of deletion
      */
-    public static function delete_log($log_id)
+    public static function sdw_delete_log($log_id)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -1898,8 +1975,11 @@ class Log_Manager
 
     /**
      * Bulk delete logs by IDs
+     * 
+     * @param array $log_ids Array of log IDs to delete
+     * @return bool|int Result of deletion
      */
-    public static function bulk_delete_logs($log_ids)
+    public static function sdw_bulk_delete_logs($log_ids)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . self::TABLE_NAME;
@@ -1926,19 +2006,11 @@ class Log_Manager
     }
 
     /**
-     * Clear all logs
-     */
-    // public static function clear_all_logs() {
-//     global $wpdb;
-//     $table_name = $wpdb->prefix . self::TABLE_NAME;
-
-    //     return $wpdb->query("TRUNCATE TABLE $table_name");
-// }
-
-    /**
      * Handle delete requests
+     * 
+     * @return void
      */
-    public static function handle_delete_requests()
+    public static function sdw_handle_delete_requests()
     {
         if (!current_user_can('manage_options')) {
             return;
@@ -1958,7 +2030,7 @@ class Log_Manager
 
             if (!empty($_POST['log_ids'])) {
                 $log_ids = array_map('intval', $_POST['log_ids']);
-                self::bulk_delete_logs($log_ids);
+                self::sdw_bulk_delete_logs($log_ids);
             }
 
             wp_redirect(remove_query_arg(['_wp_http_referer'], wp_unslash($_SERVER['REQUEST_URI'])));
@@ -1984,19 +2056,17 @@ class Log_Manager
             }
 
             // Get all log IDs matching filters
-            $all_logs_data = self::get_logs(1, 1000000, $filters); // Get all logs
+            $all_logs_data = self::sdw_get_logs(1, 1000000, $filters); // Get all logs
             $log_ids = array_map(function ($log) {
                 return $log->id;
             }, $all_logs_data['logs']);
 
             if (!empty($log_ids)) {
-                self::bulk_delete_logs($log_ids);
+                self::sdw_bulk_delete_logs($log_ids);
             }
 
             wp_redirect(remove_query_arg(['_wp_http_referer'], wp_unslash($_SERVER['REQUEST_URI'])));
             exit;
         }
     }
-
-
 }

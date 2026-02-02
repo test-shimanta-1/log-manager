@@ -1,11 +1,22 @@
 <?php
+/**
+ * Log Manager Export Class
+ * 
+ * @package Log_Manager
+ * @since 1.0.6
+ */
+
+/**
+ * Handles exporting of logs to various formats (CSV, PDF)
+ */
 class Log_Manager_Export
 {
-
     /**
-     * Handle export request
+     * Handles export requests and redirects to appropriate export method
+     *
+     * @return void
      */
-    public static function handle_export_request()
+    public static function sdw_handle_export_request()
     {
         // Check if export_type is set
         if (!isset($_GET['export_type']) || $_GET['page'] !== 'log-manager') {
@@ -28,15 +39,15 @@ class Log_Manager_Export
         }
 
         // Get all logs for export
-        $logs = self::get_all_logs_for_export($filters);
+        $logs = self::sdw_get_all_logs_for_export($filters);
 
         // Perform export based on type
         $export_type = sanitize_text_field($_GET['export_type']);
 
         if ($export_type === 'csv') {
-            self::export_csv($logs, $filters);
+            self::sdw_export_csv($logs, $filters);
         } elseif ($export_type === 'pdf') {
-            self::export_pdf($logs, $filters);
+            self::sdw_export_pdf($logs, $filters);
         } else {
             wp_die('Invalid export type');
         }
@@ -45,25 +56,34 @@ class Log_Manager_Export
     }
 
     /**
-     * Format action for display (proxy method)
+     * Formats action for display by converting action key to readable text
+     *
+     * @param string $action The action key to format
+     * @return string Readable action description
      */
-    public static function format_action($action)
+    public static function sdw_format_action($action)
     {
         return Log_Manager::format_action($action);
     }
 
     /**
-     * Get object display text (proxy method)
+     * Generates display text for an object based on its type and ID
+     *
+     * @param object $log The log object containing object details
+     * @return string Formatted object display text
      */
-    public static function get_object_display_text($log)
+    public static function sdw_get_object_display_text($log)
     {
         return Log_Manager::get_object_display_text($log);
     }
 
     /**
-     * Get all logs for export (no pagination limit) with raw details
+     * Retrieves all logs for export without pagination limits
+     *
+     * @param array $filters Array of filter parameters
+     * @return array Array of log objects
      */
-    public static function get_all_logs_for_export($filters = [])
+    public static function sdw_get_all_logs_for_export($filters = [])
     {
         global $wpdb;
 
@@ -130,9 +150,13 @@ class Log_Manager_Export
     }
 
     /**
-     * Export logs to CSV with raw details
+     * Exports logs to CSV format with raw details
+     *
+     * @param array $logs Array of log objects to export
+     * @param array $filters Array of filter parameters for filename generation
+     * @return void Outputs CSV file for download
      */
-    public static function export_csv($logs, $filters = [])
+    public static function sdw_export_csv($logs, $filters = [])
     {
         // Generate filename based on filters
         $filename = 'log-manager-export';
@@ -194,7 +218,7 @@ class Log_Manager_Export
             $username = $user ? $user->display_name : 'System';
 
             // Get formatted details for CSV
-            $details_text = self::format_details_for_csv($log->details);
+            $details_text = self::sdw_format_details_for_csv($log->details);
 
             fputcsv($output, [
                 $log->id,
@@ -203,10 +227,10 @@ class Log_Manager_Export
                 $username,
                 $log->user_ip,
                 ucfirst($log->severity),
-                self::format_action($log->action),
+                self::sdw_format_action($log->action),
                 $log->object_type,
                 $log->object_id,
-                self::get_object_display_text($log),
+                self::sdw_get_object_display_text($log),
                 $details_text
             ]);
         }
@@ -216,9 +240,12 @@ class Log_Manager_Export
     }
 
     /**
-     * Format details for CSV
+     * Formats log details for CSV export by converting arrays to readable strings
+     *
+     * @param mixed $details Log details (string or array)
+     * @return string Formatted details text for CSV
      */
-    private static function format_details_for_csv($details)
+    private static function sdw_format_details_for_csv($details)
     {
         if (empty($details)) {
             return '';
@@ -261,15 +288,19 @@ class Log_Manager_Export
     }
 
     /**
-     * Export logs to PDF - Simple and complete
+     * Exports logs to PDF format using DOMPDF library or falls back to HTML
+     *
+     * @param array $logs Array of log objects to export
+     * @param array $filters Array of filter parameters for report generation
+     * @return void Outputs PDF or HTML file for download
      */
-    public static function export_pdf($logs, $filters = [])
+    public static function sdw_export_pdf($logs, $filters = [])
     {
         // Generate filename
         $filename = 'log-manager-export-' . date('Y-m-d-H-i-s') . '.pdf';
 
         // Create HTML content for PDF
-        $html = self::generate_pdf_html($logs, $filters);
+        $html = self::sdw_generate_pdf_html($logs, $filters);
 
         // Try to load DOMPDF
         $dompdf_loaded = false;
@@ -322,18 +353,22 @@ class Log_Manager_Export
                 exit;
             } catch (Exception $e) {
                 error_log('PDF Export Error: ' . $e->getMessage());
-                self::fallback_html_export($html, str_replace('.pdf', '.html', $filename));
+                self::sdw_fallback_html_export($html, str_replace('.pdf', '.html', $filename));
             }
         } else {
             // DOMPDF not available, fall back to HTML
-            self::fallback_html_export($html, str_replace('.pdf', '.html', $filename));
+            self::sdw_fallback_html_export($html, str_replace('.pdf', '.html', $filename));
         }
     }
 
     /**
      * Fallback HTML export when DOMPDF is not available
+     *
+     * @param string $html HTML content to export
+     * @param string $filename Filename for the exported file
+     * @return void Outputs HTML file for download
      */
-    private static function fallback_html_export($html, $filename)
+    private static function sdw_fallback_html_export($html, $filename)
     {
         if (ob_get_level()) {
             ob_end_clean();
@@ -349,9 +384,13 @@ class Log_Manager_Export
     }
 
     /**
-     * Generate HTML for PDF export - Simple and complete
+     * Generates HTML content for PDF export with proper formatting
+     *
+     * @param array $logs Array of log objects to include in report
+     * @param array $filters Array of filter parameters applied to the report
+     * @return string HTML content for PDF generation
      */
-    private static function generate_pdf_html($logs, $filters = [])
+    private static function sdw_generate_pdf_html($logs, $filters = [])
     {
         $site_name = get_bloginfo('name');
         $current_date = date_i18n('F j, Y H:i:s');
@@ -548,7 +587,7 @@ class Log_Manager_Export
                             $username = $user ? $user->display_name : 'System';
                             $time = date_i18n('M j, H:i', strtotime($log->timestamp));
                             $time_full = date_i18n('Y-m-d H:i:s', strtotime($log->timestamp));
-                            $object_text = self::get_object_display_text($log);
+                            $object_text = self::sdw_get_object_display_text($log);
                             ?>
                             <tr>
                                 <td class="time" title="<?php echo esc_attr($time_full); ?>">
@@ -563,10 +602,10 @@ class Log_Manager_Export
                                         <small style="color: #666;">ID: <?php echo $log->user_id; ?></small>
                                     <?php endif; ?>
                                 </td>
-                                <td class="action"><?php echo esc_html(self::format_action($log->action)); ?></td>
+                                <td class="action"><?php echo esc_html(self::sdw_format_action($log->action)); ?></td>
                                 <td class="object"><?php echo esc_html($object_text); ?></td>
                                 <td class="details">
-                                    <?php echo self::format_detailed_info_for_pdf($log); ?>
+                                    <?php echo self::sdw_format_detailed_info_for_pdf($log); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -585,9 +624,12 @@ class Log_Manager_Export
     }
 
     /**
-     * Format detailed information for PDF - Show more info
+     * Formats detailed log information for PDF display with proper formatting
+     *
+     * @param object $log Log object containing details to format
+     * @return string HTML-formatted details for PDF display
      */
-    private static function format_detailed_info_for_pdf($log)
+    private static function sdw_format_detailed_info_for_pdf($log)
     {
         $details = $log->details;
 
@@ -688,5 +730,4 @@ class Log_Manager_Export
 
         return $output;
     }
-
 }

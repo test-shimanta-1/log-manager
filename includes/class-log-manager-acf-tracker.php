@@ -1,10 +1,23 @@
 <?php
+/**
+ * Log Manager acf changes class file
+ * 
+ * It handle acf field changes such as group settings, field settings etc. 
+ * 
+ * @package Log_Manager
+ * @since 1.0.6
+ */
 class Log_Manager_ACF_Tracker
 {
 
     private static $old_acf_field_groups = [];
     private static $is_acf_field_group_screen = false;
 
+    /**
+     * Initialize the ACF tracker
+     *
+     * @return void
+     */
     public static function init()
     {
         if (!function_exists('acf')) {
@@ -12,39 +25,47 @@ class Log_Manager_ACF_Tracker
         }
 
         $instance = new self();
-        $instance->setup_hooks();
+        $instance->sdw_setup_hooks();
     }
 
-    private function setup_hooks()
+    /**
+     * Set up WordPress hooks for ACF tracking
+     *
+     * @return void
+     */
+    private function sdw_setup_hooks()
     {
         // Detect when we're on ACF field group edit screen
-        add_action('current_screen', [$this, 'detect_acf_screen']);
+        add_action('current_screen', [$this, 'sdw_detect_acf_screen']);
 
         // Store complete field group data BEFORE saving
-        add_action('load-post.php', [$this, 'store_field_group_data_before_edit']);
-        add_action('load-post-new.php', [$this, 'store_field_group_data_before_edit']);
+        add_action('load-post.php', [$this, 'sdw_store_field_group_data_before_edit']);
+        add_action('load-post-new.php', [$this, 'sdw_store_field_group_data_before_edit']);
 
         // Also store on admin_init (backup method)
-        add_action('admin_init', [$this, 'store_acf_field_group_backup'], 5);
+        add_action('admin_init', [$this, 'sdw_store_acf_field_group_backup'], 5);
 
         // Log field group changes AFTER saving
-        add_action('acf/update_field_group', [$this, 'log_field_group_changes'], 20, 1);
+        add_action('acf/update_field_group', [$this, 'sdw_log_field_group_changes'], 20, 1);
 
         // Log field group duplication
-        add_action('acf/duplicate_field_group', [$this, 'log_field_group_duplicate'], 10, 2);
+        add_action('acf/duplicate_field_group', [$this, 'sdw_log_field_group_duplicate'], 10, 2);
 
         // Log field group deletion
-        add_action('delete_post', [$this, 'log_field_group_deletion'], 10, 1);
+        add_action('delete_post', [$this, 'sdw_log_field_group_deletion'], 10, 1);
 
         // Log individual field value changes
-        add_action('acf/save_post', [$this, 'store_old_acf_values'], 5);
-        add_action('acf/save_post', [$this, 'log_acf_value_changes'], 20);
+        add_action('acf/save_post', [$this, 'sdw_store_old_acf_values'], 5);
+        add_action('acf/save_post', [$this, 'sdw_log_acf_value_changes'], 20);
     }
 
     /**
      * Detect if we're on ACF field group screen
+     *
+     * @param WP_Screen $screen The current screen object
+     * @return void
      */
-    public function detect_acf_screen($screen)
+    public function sdw_detect_acf_screen($screen)
     {
         if ($screen->post_type === 'acf-field-group') {
             self::$is_acf_field_group_screen = true;
@@ -52,9 +73,11 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Store COMPLETE field group data before editing
+     * Store complete field group data before editing
+     *
+     * @return void
      */
-    public function store_field_group_data_before_edit()
+    public function sdw_store_field_group_data_before_edit()
     {
         global $post;
 
@@ -70,7 +93,7 @@ class Log_Manager_ACF_Tracker
         }
 
         // Get complete field group data
-        $field_group = $this->get_complete_field_group_data($field_group_id);
+        $field_group = $this->sdw_get_complete_field_group_data($field_group_id);
 
         if ($field_group) {
             self::$old_acf_field_groups[$field_group_id] = $field_group;
@@ -84,8 +107,10 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Backup method to store ACF field group data
+     *
+     * @return void
      */
-    public function store_acf_field_group_backup()
+    public function sdw_store_acf_field_group_backup()
     {
         global $post;
 
@@ -101,7 +126,7 @@ class Log_Manager_ACF_Tracker
         }
 
         // Get complete field group data
-        $field_group = $this->get_complete_field_group_data($field_group_id);
+        $field_group = $this->sdw_get_complete_field_group_data($field_group_id);
 
         if ($field_group) {
             self::$old_acf_field_groups[$field_group_id] = $field_group;
@@ -109,9 +134,12 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Get COMPLETE field group data including ALL properties
+     * Get complete field group data including all properties
+     *
+     * @param int $field_group_id The field group ID
+     * @return array|null Complete field group data or null if not found
      */
-    private function get_complete_field_group_data($field_group_id)
+    private function sdw_get_complete_field_group_data($field_group_id)
     {
         $field_group = acf_get_field_group($field_group_id);
 
@@ -120,19 +148,22 @@ class Log_Manager_ACF_Tracker
         }
 
         $data = [
-            'basic' => $this->get_field_group_basic_properties($field_group),
-            'location' => $this->get_field_group_location_rules($field_group),
-            'presentation' => $this->get_field_group_presentation_properties($field_group),
-            'fields' => $this->get_all_field_properties($field_group_id)
+            'basic' => $this->sdw_get_field_group_basic_properties($field_group),
+            'location' => $this->sdw_get_field_group_location_rules($field_group),
+            'presentation' => $this->sdw_get_field_group_presentation_properties($field_group),
+            'fields' => $this->sdw_get_all_field_properties($field_group_id)
         ];
 
         return $data;
     }
 
     /**
-     * Get field group BASIC properties
+     * Get field group basic properties
+     *
+     * @param array $field_group The field group data
+     * @return array Basic properties
      */
-    private function get_field_group_basic_properties($field_group)
+    private function sdw_get_field_group_basic_properties($field_group)
     {
         return [
             'title' => $field_group['title'] ?? '',
@@ -144,9 +175,12 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Get field group LOCATION rules
+     * Get field group location rules
+     *
+     * @param array $field_group The field group data
+     * @return array Location rules
      */
-    private function get_field_group_location_rules($field_group)
+    private function sdw_get_field_group_location_rules($field_group)
     {
         $location_rules = [];
 
@@ -166,9 +200,12 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Get field group PRESENTATION properties
+     * Get field group presentation properties
+     *
+     * @param array $field_group The field group data
+     * @return array Presentation properties
      */
-    private function get_field_group_presentation_properties($field_group)
+    private function sdw_get_field_group_presentation_properties($field_group)
     {
         return [
             'position' => $field_group['position'] ?? 'normal',
@@ -181,9 +218,12 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Get ALL field properties (including sub-fields)
+     * Get all field properties including sub-fields
+     *
+     * @param int $field_group_id The field group ID
+     * @return array All field properties
      */
-    private function get_all_field_properties($field_group_id)
+    private function sdw_get_all_field_properties($field_group_id)
     {
         $fields = acf_get_fields($field_group_id);
         $all_fields = [];
@@ -191,14 +231,14 @@ class Log_Manager_ACF_Tracker
         if ($fields) {
             foreach ($fields as $field) {
                 $field_key = $field['key'] ?? uniqid();
-                $all_fields[$field_key] = $this->extract_complete_field_properties($field);
+                $all_fields[$field_key] = $this->sdw_extract_complete_field_properties($field);
 
                 // Handle nested fields
                 if (!empty($field['sub_fields'])) {
                     foreach ($field['sub_fields'] as $sub_field) {
                         $sub_field_key = $sub_field['key'] ?? uniqid();
                         $all_fields[$sub_field_key] = array_merge(
-                            $this->extract_complete_field_properties($sub_field),
+                            $this->sdw_extract_complete_field_properties($sub_field),
                             ['parent_field' => $field_key]
                         );
                     }
@@ -211,7 +251,7 @@ class Log_Manager_ACF_Tracker
                             foreach ($layout['sub_fields'] as $layout_field) {
                                 $layout_field_key = $layout_field['key'] ?? uniqid();
                                 $all_fields[$layout_field_key] = array_merge(
-                                    $this->extract_complete_field_properties($layout_field),
+                                    $this->sdw_extract_complete_field_properties($layout_field),
                                     [
                                         'parent_field' => $field_key,
                                         'layout' => $layout['name'] ?? ''
@@ -228,9 +268,12 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Extract COMPLETE field properties
+     * Extract complete field properties
+     *
+     * @param array $field The field data
+     * @return array Complete field properties
      */
-    private function extract_complete_field_properties($field)
+    private function sdw_extract_complete_field_properties($field)
     {
         $properties = [
             // Basic Properties
@@ -312,8 +355,11 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Log field group changes
+     *
+     * @param array $field_group The updated field group data
+     * @return void
      */
-    public function log_field_group_changes($field_group)
+    public function sdw_log_field_group_changes($field_group)
     {
         $field_group_id = $field_group['ID'] ?? 0;
 
@@ -327,18 +373,18 @@ class Log_Manager_ACF_Tracker
             : null;
 
         // Get new data
-        $new_data = $this->get_complete_field_group_data($field_group_id);
+        $new_data = $this->sdw_get_complete_field_group_data($field_group_id);
 
         if (!$new_data) {
             return;
         }
 
         // Compare and get detailed changes
-        $changes = $this->compare_field_group_changes($old_data, $new_data, $field_group_id);
+        $changes = $this->sdw_compare_field_group_changes($old_data, $new_data, $field_group_id);
 
         // Log if there are changes
         if (!empty($changes)) {
-            $this->log_changes_to_database($field_group, $changes);
+            $this->sdw_log_changes_to_database($field_group, $changes);
         }
 
         // Clean up
@@ -346,9 +392,14 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Compare field group changes in DETAIL
+     * Compare field group changes in detail
+     *
+     * @param array|null $old_data Old field group data
+     * @param array $new_data New field group data
+     * @param int $field_group_id The field group ID
+     * @return array Changes detected
      */
-    private function compare_field_group_changes($old_data, $new_data, $field_group_id)
+    private function sdw_compare_field_group_changes($old_data, $new_data, $field_group_id)
     {
         $changes = [];
 
@@ -363,25 +414,25 @@ class Log_Manager_ACF_Tracker
         }
 
         // 1. Compare Basic Properties
-        $basic_changes = $this->compare_basic_properties($old_data['basic'], $new_data['basic']);
+        $basic_changes = $this->sdw_compare_basic_properties($old_data['basic'], $new_data['basic']);
         if (!empty($basic_changes)) {
             $changes['basic'] = $basic_changes;
         }
 
         // 2. Compare Location Rules
-        $location_changes = $this->compare_location_rules($old_data['location'], $new_data['location']);
+        $location_changes = $this->sdw_compare_location_rules($old_data['location'], $new_data['location']);
         if (!empty($location_changes)) {
             $changes['location'] = $location_changes;
         }
 
         // 3. Compare Presentation Properties
-        $presentation_changes = $this->compare_presentation_properties($old_data['presentation'], $new_data['presentation']);
+        $presentation_changes = $this->sdw_compare_presentation_properties($old_data['presentation'], $new_data['presentation']);
         if (!empty($presentation_changes)) {
             $changes['presentation'] = $presentation_changes;
         }
 
         // 4. Compare ALL Fields
-        $field_changes = $this->compare_all_fields($old_data['fields'], $new_data['fields']);
+        $field_changes = $this->sdw_compare_all_fields($old_data['fields'], $new_data['fields']);
         if (!empty($field_changes)) {
             $changes['fields'] = $field_changes;
         }
@@ -391,8 +442,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Compare basic properties
+     *
+     * @param array $old_basic Old basic properties
+     * @param array $new_basic New basic properties
+     * @return array Changes in basic properties
      */
-    private function compare_basic_properties($old_basic, $new_basic)
+    private function sdw_compare_basic_properties($old_basic, $new_basic)
     {
         $changes = [];
         $properties = ['title', 'description', 'active', 'menu_order'];
@@ -401,10 +456,10 @@ class Log_Manager_ACF_Tracker
             $old_val = $old_basic[$prop] ?? '';
             $new_val = $new_basic[$prop] ?? '';
 
-            if ($this->values_differ($old_val, $new_val)) {
+            if ($this->sdw_values_differ($old_val, $new_val)) {
                 $changes[$prop] = [
-                    'old' => $this->format_value($old_val, $prop),
-                    'new' => $this->format_value($new_val, $prop)
+                    'old' => $this->sdw_format_value($old_val, $prop),
+                    'new' => $this->sdw_format_value($new_val, $prop)
                 ];
             }
         }
@@ -414,8 +469,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Compare location rules
+     *
+     * @param array $old_location Old location rules
+     * @param array $new_location New location rules
+     * @return array Changes in location rules
      */
-    private function compare_location_rules($old_location, $new_location)
+    private function sdw_compare_location_rules($old_location, $new_location)
     {
         $changes = [];
         $old_serialized = serialize($old_location);
@@ -430,13 +489,13 @@ class Log_Manager_ACF_Tracker
             // Compare each rule group
             foreach ($new_location as $group_index => $new_group) {
                 if (!isset($old_location[$group_index])) {
-                    $added["Group " . ($group_index + 1)] = $this->format_location_group($new_group);
+                    $added["Group " . ($group_index + 1)] = $this->sdw_format_location_group($new_group);
                 } else {
                     $old_group = $old_location[$group_index];
                     if (serialize($old_group) !== serialize($new_group)) {
                         $modified["Group " . ($group_index + 1)] = [
-                            'old' => $this->format_location_group($old_group),
-                            'new' => $this->format_location_group($new_group)
+                            'old' => $this->sdw_format_location_group($old_group),
+                            'new' => $this->sdw_format_location_group($new_group)
                         ];
                     }
                 }
@@ -445,7 +504,7 @@ class Log_Manager_ACF_Tracker
             // Find removed groups
             foreach ($old_location as $group_index => $old_group) {
                 if (!isset($new_location[$group_index])) {
-                    $removed["Group " . ($group_index + 1)] = $this->format_location_group($old_group);
+                    $removed["Group " . ($group_index + 1)] = $this->sdw_format_location_group($old_group);
                 }
             }
 
@@ -461,14 +520,17 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Format location group for display
+     *
+     * @param array $group The location group
+     * @return string Formatted location group
      */
-    private function format_location_group($group)
+    private function sdw_format_location_group($group)
     {
         $rules = [];
         foreach ($group as $rule) {
-            $param = $this->get_location_param_label($rule['param'] ?? '');
+            $param = $this->sdw_get_location_param_label($rule['param'] ?? '');
             $operator = $rule['operator'] ?? '==';
-            $value = $this->get_location_value_label($rule['param'] ?? '', $rule['value'] ?? '');
+            $value = $this->sdw_get_location_value_label($rule['param'] ?? '', $rule['value'] ?? '');
 
             $rules[] = "{$param} {$operator} {$value}";
         }
@@ -478,8 +540,11 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Get location parameter label
+     *
+     * @param string $param The location parameter
+     * @return string Human-readable label
      */
-    private function get_location_param_label($param)
+    private function sdw_get_location_param_label($param)
     {
         $labels = [
             'post_type' => 'Post Type',
@@ -508,8 +573,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Get location value label
+     *
+     * @param string $param The location parameter
+     * @param mixed $value The location value
+     * @return string Human-readable value label
      */
-    private function get_location_value_label($param, $value)
+    private function sdw_get_location_value_label($param, $value)
     {
         switch ($param) {
             case 'post_type':
@@ -559,8 +628,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Compare presentation properties
+     *
+     * @param array $old_presentation Old presentation properties
+     * @param array $new_presentation New presentation properties
+     * @return array Changes in presentation properties
      */
-    private function compare_presentation_properties($old_presentation, $new_presentation)
+    private function sdw_compare_presentation_properties($old_presentation, $new_presentation)
     {
         $changes = [];
         $properties = [
@@ -590,14 +663,14 @@ class Log_Manager_ACF_Tracker
 
             // Special handling for hide_on_screen
             if ($prop === 'hide_on_screen') {
-                $hide_changes = $this->compare_hide_on_screen($old_val, $new_val);
+                $hide_changes = $this->sdw_compare_hide_on_screen($old_val, $new_val);
                 if (!empty($hide_changes)) {
                     $changes[$prop] = $hide_changes;
                 }
                 continue;
             }
 
-            if ($this->values_differ($old_val, $new_val)) {
+            if ($this->sdw_values_differ($old_val, $new_val)) {
                 $old_label = is_array($labels) && isset($labels[$old_val]) ? $labels[$old_val] : $old_val;
                 $new_label = is_array($labels) && isset($labels[$new_val]) ? $labels[$new_val] : $new_val;
 
@@ -613,8 +686,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Compare hide_on_screen settings
+     *
+     * @param mixed $old_hide Old hide settings
+     * @param mixed $new_hide New hide settings
+     * @return array Changes in hide settings
      */
-    private function compare_hide_on_screen($old_hide, $new_hide)
+    private function sdw_compare_hide_on_screen($old_hide, $new_hide)
     {
         if (!is_array($old_hide))
             $old_hide = [];
@@ -666,9 +743,13 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Compare ALL fields in detail
+     * Compare all fields in detail
+     *
+     * @param array $old_fields Old field data
+     * @param array $new_fields New field data
+     * @return array Field changes
      */
-    private function compare_all_fields($old_fields, $new_fields)
+    private function sdw_compare_all_fields($old_fields, $new_fields)
     {
         $changes = [];
 
@@ -716,7 +797,7 @@ class Log_Manager_ACF_Tracker
 
         foreach ($common_fields as $field_key => $old_field) {
             $new_field = $new_fields[$field_key];
-            $field_changes = $this->compare_single_field_changes($old_field, $new_field);
+            $field_changes = $this->sdw_compare_single_field_changes($old_field, $new_field);
 
             if (!empty($field_changes)) {
                 $modified_fields[$old_field['label']] = $field_changes;
@@ -739,9 +820,13 @@ class Log_Manager_ACF_Tracker
     }
 
     /**
-     * Compare single field changes in DETAIL
+     * Compare single field changes in detail
+     *
+     * @param array $old_field Old field data
+     * @param array $new_field New field data
+     * @return array Field changes
      */
-    private function compare_single_field_changes($old_field, $new_field)
+    private function sdw_compare_single_field_changes($old_field, $new_field)
     {
         $changes = [];
 
@@ -758,19 +843,19 @@ class Log_Manager_ACF_Tracker
             }
 
             // Skip if values are the same
-            if ($this->values_differ($old_value, $new_value)) {
-                $property_label = $this->get_field_property_label($property);
+            if ($this->sdw_values_differ($old_value, $new_value)) {
+                $property_label = $this->sdw_get_field_property_label($property);
 
                 if (is_array($old_value) && is_array($new_value)) {
                     // For arrays, show detailed comparison
-                    $array_changes = $this->compare_array_changes($old_value, $new_value, $property);
+                    $array_changes = $this->sdw_compare_array_changes($old_value, $new_value, $property);
                     if (!empty($array_changes)) {
                         $changes[$property_label] = $array_changes;
                     }
                 } else {
                     $changes[$property_label] = [
-                        'old' => $this->format_value($old_value, $property),
-                        'new' => $this->format_value($new_value, $property)
+                        'old' => $this->sdw_format_value($old_value, $property),
+                        'new' => $this->sdw_format_value($new_value, $property)
                     ];
                 }
             }
@@ -781,16 +866,21 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Compare array changes
+     *
+     * @param array $old_array Old array
+     * @param array $new_array New array
+     * @param string $property_name Property name
+     * @return array Array changes
      */
-    private function compare_array_changes($old_array, $new_array, $property_name)
+    private function sdw_compare_array_changes($old_array, $new_array, $property_name)
     {
         $changes = [];
 
         // Special handling for conditional_logic
         if ($property_name === 'conditional_logic') {
             if (!empty($old_array) || !empty($new_array)) {
-                $old_formatted = $this->format_conditional_logic($old_array);
-                $new_formatted = $this->format_conditional_logic($new_array);
+                $old_formatted = $this->sdw_format_conditional_logic($old_array);
+                $new_formatted = $this->sdw_format_conditional_logic($new_array);
 
                 if ($old_formatted !== $new_formatted) {
                     return [
@@ -868,8 +958,11 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Format conditional logic for display
+     *
+     * @param array $logic Conditional logic array
+     * @return string Formatted conditional logic
      */
-    private function format_conditional_logic($logic)
+    private function sdw_format_conditional_logic($logic)
     {
         if (empty($logic) || !is_array($logic)) {
             return 'No conditional logic';
@@ -893,8 +986,11 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Get field property label
+     *
+     * @param string $property Property name
+     * @return string Human-readable label
      */
-    private function get_field_property_label($property)
+    private function sdw_get_field_property_label($property)
     {
         $labels = [
             'label' => 'Field Label',
@@ -960,8 +1056,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Format value for display
+     *
+     * @param mixed $value The value to format
+     * @param string $property Property name (optional)
+     * @return string Formatted value
      */
-    private function format_value($value, $property = '')
+    private function sdw_format_value($value, $property = '')
     {
         if (is_null($value)) {
             return '(empty)';
@@ -987,8 +1087,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Check if values differ
+     *
+     * @param mixed $old_value Old value
+     * @param mixed $new_value New value
+     * @return bool True if values differ
      */
-    private function values_differ($old_value, $new_value)
+    private function sdw_values_differ($old_value, $new_value)
     {
         if ($old_value === $new_value) {
             return false;
@@ -1009,8 +1113,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Log changes to database
+     *
+     * @param array $field_group The field group data
+     * @param array $changes The detected changes
+     * @return void
      */
-    private function log_changes_to_database($field_group, $changes)
+    private function sdw_log_changes_to_database($field_group, $changes)
     {
         $edit_url = admin_url('post.php?post=' . $field_group['ID'] . '&action=edit');
 
@@ -1076,8 +1184,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Log field group duplication
+     *
+     * @param array $new_field_group The duplicated field group
+     * @param array $old_field_group The original field group
+     * @return void
      */
-    public function log_field_group_duplicate($new_field_group, $old_field_group)
+    public function sdw_log_field_group_duplicate($new_field_group, $old_field_group)
     {
         $edit_url = admin_url('post.php?post=' . $new_field_group['ID'] . '&action=edit');
 
@@ -1100,8 +1212,11 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Log field group deletion
+     *
+     * @param int $post_id The deleted post ID
+     * @return void
      */
-    public function log_field_group_deletion($post_id)
+    public function sdw_log_field_group_deletion($post_id)
     {
         $post = get_post($post_id);
 
@@ -1130,8 +1245,11 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Store old ACF field values before saving
+     *
+     * @param int|string $post_id The post ID or term ID
+     * @return void
      */
-    public function store_old_acf_values($post_id)
+    public function sdw_store_old_acf_values($post_id)
     {
         // Skip field groups themselves
         if (get_post_type($post_id) === 'acf-field-group') {
@@ -1173,18 +1291,21 @@ class Log_Manager_ACF_Tracker
         if ($is_term && $term_id > 0) {
             // We'll handle term logging in the main save hook
             add_action('edited_term', function ($term_id) {
-                $this->log_term_acf_value_changes($term_id);
+                $this->sdw_log_term_acf_value_changes($term_id);
             }, 20, 1);
         }
     }
 
     /**
      * Log ACF field value changes
+     *
+     * @param int|string $post_id The post ID or term ID
+     * @return void
      */
-    public function log_acf_value_changes($post_id)
+    public function sdw_log_acf_value_changes($post_id)
     {
         // Skip if we shouldn't process
-        if ($this->should_skip_acf_logging($post_id)) {
+        if ($this->sdw_should_skip_acf_logging($post_id)) {
             return;
         }
 
@@ -1229,11 +1350,11 @@ class Log_Manager_ACF_Tracker
                 }
 
                 // Check if value changed
-                if ($this->values_differ($old_field['value'], $current_field['value'])) {
+                if ($this->sdw_values_differ($old_field['value'], $current_field['value'])) {
                     $field_label = $current_field['label'] ?? $field_name;
                     $changes[$field_label] = [
-                        'old' => $this->format_acf_field_value($old_field['value'], $old_field['type']),
-                        'new' => $this->format_acf_field_value($current_field['value'], $current_field['type'])
+                        'old' => $this->sdw_format_acf_field_value($old_field['value'], $old_field['type']),
+                        'new' => $this->sdw_format_acf_field_value($current_field['value'], $current_field['type'])
                     ];
                     $has_changes = true;
                 }
@@ -1243,7 +1364,7 @@ class Log_Manager_ACF_Tracker
                     $field_label = $current_field['label'] ?? $field_name;
                     $changes[$field_label] = [
                         'action' => 'field_value_added',
-                        'value' => $this->format_acf_field_value($current_field['value'], $current_field['type'])
+                        'value' => $this->sdw_format_acf_field_value($current_field['value'], $current_field['type'])
                     ];
                     $has_changes = true;
                 }
@@ -1257,7 +1378,7 @@ class Log_Manager_ACF_Tracker
                     $field_label = $old_field['label'] ?? $field_name;
                     $changes[$field_label . '_removed'] = [
                         'action' => 'field_value_cleared',
-                        'old_value' => $this->format_acf_field_value($old_field['value'], $old_field['type'])
+                        'old_value' => $this->sdw_format_acf_field_value($old_field['value'], $old_field['type'])
                     ];
                     $has_changes = true;
                 }
@@ -1266,7 +1387,7 @@ class Log_Manager_ACF_Tracker
 
         // Log changes if any
         if ($has_changes) {
-            $this->log_acf_field_value_changes_to_db($post_id, $changes, $field_type_changes);
+            $this->sdw_log_acf_field_value_changes_to_db($post_id, $changes, $field_type_changes);
         }
 
         // Clean up old data
@@ -1275,8 +1396,11 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Check if we should skip ACF logging for this post/term
+     *
+     * @param int|string $post_id The post ID or term ID
+     * @return bool True if should skip logging
      */
-    private function should_skip_acf_logging($post_id)
+    private function sdw_should_skip_acf_logging($post_id)
     {
         // Skip field groups themselves (handled separately)
         if (get_post_type($post_id) === 'acf-field-group') {
@@ -1316,8 +1440,12 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Format ACF field value for display
+     *
+     * @param mixed $value The field value
+     * @param string $field_type The field type
+     * @return string Formatted field value
      */
-    private function format_acf_field_value($value, $field_type)
+    private function sdw_format_acf_field_value($value, $field_type)
     {
         if (is_null($value) || $value === '' || $value === false || $value === []) {
             return '(empty)';
@@ -1329,14 +1457,14 @@ class Log_Manager_ACF_Tracker
             case 'file':
                 if (is_numeric($value)) {
                     $attachment = get_post($value);
-                    return $attachment ? '📷 ' . $attachment->post_title : '📎 Attachment #' . $value;
+                    return $attachment ? ' ' . $attachment->post_title : ' Attachment #' . $value;
                 } elseif (is_array($value) && isset($value['ID'])) {
                     $attachment = get_post($value['ID']);
-                    return $attachment ? '📷 ' . $attachment->post_title : '📎 Attachment #' . $value['ID'];
+                    return $attachment ? ' ' . $attachment->post_title : ' Attachment #' . $value['ID'];
                 } elseif (is_string($value)) {
-                    return '📄 ' . basename($value);
+                    return ' ' . basename($value);
                 }
-                return '📎 Media file';
+                return ' Media file';
 
             case 'gallery':
                 if (is_array($value)) {
@@ -1346,9 +1474,9 @@ class Log_Manager_ACF_Tracker
                         $attachment = get_post($image_id);
                         $names[] = $attachment ? $attachment->post_title : 'Image #' . $image_id;
                     }
-                    return '🖼️ Gallery: ' . $count . ' images (' . implode(', ', $names) . ($count > 3 ? '...' : '') . ')';
+                    return ' Gallery: ' . $count . ' images (' . implode(', ', $names) . ($count > 3 ? '...' : '') . ')';
                 }
-                return '🖼️ Gallery';
+                return ' Gallery';
 
             case 'relationship':
             case 'post_object':
@@ -1358,12 +1486,12 @@ class Log_Manager_ACF_Tracker
                     foreach (array_slice($value, 0, 3) as $item) {
                         $post_id = is_object($item) ? $item->ID : $item;
                         $post = get_post($post_id);
-                        $titles[] = $post ? '📝 ' . $post->post_title : 'Post #' . $post_id;
+                        $titles[] = $post ? ' ' . $post->post_title : 'Post #' . $post_id;
                     }
-                    return '🔗 ' . $count . ' items (' . implode(', ', $titles) . ($count > 3 ? '...' : '') . ')';
+                    return ' ' . $count . ' items (' . implode(', ', $titles) . ($count > 3 ? '...' : '') . ')';
                 } else {
                     $post = get_post($value);
-                    return $post ? '📝 ' . $post->post_title : 'Post #' . $value;
+                    return $post ? ' ' . $post->post_title : 'Post #' . $value;
                 }
 
             case 'user':
@@ -1372,66 +1500,66 @@ class Log_Manager_ACF_Tracker
                     $names = [];
                     foreach (array_slice($value, 0, 3) as $user_id) {
                         $user = get_user_by('id', $user_id);
-                        $names[] = $user ? '👤 ' . $user->display_name : 'User #' . $user_id;
+                        $names[] = $user ? ' ' . $user->display_name : 'User #' . $user_id;
                     }
-                    return '👥 ' . $count . ' users (' . implode(', ', $names) . ($count > 3 ? '...' : '') . ')';
+                    return ' ' . $count . ' users (' . implode(', ', $names) . ($count > 3 ? '...' : '') . ')';
                 } else {
                     $user = get_user_by('id', $value);
-                    return $user ? '👤 ' . $user->display_name : 'User #' . $value;
+                    return $user ? ' ' . $user->display_name : 'User #' . $value;
                 }
 
             case 'page_link':
             case 'link':
                 if (is_array($value)) {
-                    return '🔗 ' . ($value['title'] ?? 'Link') . ' → ' . ($value['url'] ?? '');
+                    return ' ' . ($value['title'] ?? 'Link') . ' → ' . ($value['url'] ?? '');
                 } elseif (is_string($value)) {
-                    return '🔗 ' . $value;
+                    return ' ' . $value;
                 }
-                return '🔗 Link';
+                return ' Link';
 
             case 'google_map':
                 if (is_array($value) && isset($value['address'])) {
-                    return '📍 ' . $value['address'];
+                    return ' ' . $value['address'];
                 }
-                return '📍 Map location';
+                return ' Map location';
 
             case 'true_false':
-                return $value ? '✅ Yes' : '❌ No';
+                return $value ? ' Yes' : ' No';
 
             case 'select':
             case 'checkbox':
             case 'radio':
             case 'button_group':
                 if (is_array($value)) {
-                    return '📋 ' . implode(', ', array_slice($value, 0, 3)) . (count($value) > 3 ? '...' : '');
+                    return ' ' . implode(', ', array_slice($value, 0, 3)) . (count($value) > 3 ? '...' : '');
                 }
                 return '📋 ' . (string) $value;
 
             case 'color_picker':
-                return '🎨 ' . $value;
+                return ' ' . $value;
 
             case 'date_picker':
-                return '📅 ' . $value;
+                return ' ' . $value;
 
             case 'date_time_picker':
-                return '🕒 ' . $value;
+                return ' ' . $value;
 
             case 'time_picker':
-                return '⏰ ' . $value;
+                return ' ' . $value;
 
             case 'wysiwyg':
             case 'textarea':
                 $stripped = wp_strip_all_tags($value);
-                return '📝 ' . (strlen($stripped) > 50 ? substr($stripped, 0, 50) . '...' : $stripped);
+                return ' ' . (strlen($stripped) > 50 ? substr($stripped, 0, 50) . '...' : $stripped);
 
             case 'repeater':
             case 'flexible_content':
             case 'group':
                 if (is_array($value)) {
                     $count = count($value);
-                    return '📑 ' . $count . ' item' . ($count !== 1 ? 's' : '');
+                    return ' ' . $count . ' item' . ($count !== 1 ? 's' : '');
                 }
-                return '📑 Repeater/Group field';
+                return ' Repeater/Group field';
 
             case 'taxonomy':
                 if (is_array($value)) {
@@ -1439,37 +1567,37 @@ class Log_Manager_ACF_Tracker
                     $terms = [];
                     foreach (array_slice($value, 0, 3) as $term_id) {
                         $term = get_term($term_id);
-                        $terms[] = $term ? '🏷️ ' . $term->name : 'Term #' . $term_id;
+                        $terms[] = $term ? ' ' . $term->name : 'Term #' . $term_id;
                     }
-                    return '🏷️ ' . $count . ' terms (' . implode(', ', $terms) . ($count > 3 ? '...' : '') . ')';
+                    return ' ' . $count . ' terms (' . implode(', ', $terms) . ($count > 3 ? '...' : '') . ')';
                 } else {
                     $term = get_term($value);
-                    return $term ? '🏷️ ' . $term->name : 'Term #' . $value;
+                    return $term ? ' ' . $term->name : 'Term #' . $value;
                 }
 
             case 'email':
-                return '📧 ' . $value;
+                return ' ' . $value;
 
             case 'url':
-                return '🌐 ' . $value;
+                return ' ' . $value;
 
             case 'password':
-                return '🔒 ' . str_repeat('•', min(strlen($value), 8));
+                return ' ' . str_repeat('•', min(strlen($value), 8));
 
             case 'number':
             case 'range':
-                return '🔢 ' . $value;
+                return ' ' . $value;
 
             case 'oembed':
-                return '🎬 Embedded media';
+                return ' Embedded media';
 
             default:
                 if (is_array($value)) {
                     $count = count($value);
-                    return '📊 Array: ' . $count . ' item' . ($count !== 1 ? 's' : '');
+                    return ' Array: ' . $count . ' item' . ($count !== 1 ? 's' : '');
                 }
                 if (is_object($value)) {
-                    return '⚙️ ' . get_class($value);
+                    return ' ' . get_class($value);
                 }
                 $str_value = (string) $value;
                 return (strlen($str_value) > 50 ? substr($str_value, 0, 50) . '...' : $str_value);
@@ -1478,8 +1606,13 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Log ACF field value changes to database
+     *
+     * @param int|string $post_id The post ID or term ID
+     * @param array $changes The detected changes
+     * @param array $field_type_changes Field type changes
+     * @return void
      */
-    private function log_acf_field_value_changes_to_db($post_id, $changes, $field_type_changes = [])
+    private function sdw_log_acf_field_value_changes_to_db($post_id, $changes, $field_type_changes = [])
     {
         // Determine object type and name
         $object_type = '';
@@ -1530,10 +1663,10 @@ class Log_Manager_ACF_Tracker
 
         // Add links
         if ($edit_url) {
-            $details['edit_' . $object_type] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit " . ($object_type === 'term' ? 'term' : 'post') . "</a>";
+            $details['edit_' . $object_type] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit " . ($object_type === 'term' ? 'term' : 'post') . "</a>";
         }
         if ($view_url) {
-            $details['view_' . $object_type] = "<a href='" . esc_url($view_url) . "' target='_blank'>👁️ View " . ($object_type === 'term' ? 'term' : 'post') . "</a>";
+            $details['view_' . $object_type] = "<a href='" . esc_url($view_url) . "' target='_blank'> View " . ($object_type === 'term' ? 'term' : 'post') . "</a>";
         }
 
         // Log to database
@@ -1549,8 +1682,11 @@ class Log_Manager_ACF_Tracker
 
     /**
      * Handle term ACF value changes separately
+     *
+     * @param int $term_id The term ID
+     * @return void
      */
-    public function log_term_acf_value_changes($term_id)
+    public function sdw_log_term_acf_value_changes($term_id)
     {
         $post_id = 'term_' . $term_id;
 
@@ -1582,11 +1718,11 @@ class Log_Manager_ACF_Tracker
 
             if ($old_field) {
                 // Check if value changed
-                if ($this->values_differ($old_field['value'], $current_field['value'])) {
+                if ($this->sdw_values_differ($old_field['value'], $current_field['value'])) {
                     $field_label = $current_field['label'] ?? $field_name;
                     $changes[$field_label] = [
-                        'old' => $this->format_acf_field_value($old_field['value'], $old_field['type']),
-                        'new' => $this->format_acf_field_value($current_field['value'], $current_field['type'])
+                        'old' => $this->sdw_format_acf_field_value($old_field['value'], $old_field['type']),
+                        'new' => $this->sdw_format_acf_field_value($current_field['value'], $current_field['type'])
                     ];
                     $has_changes = true;
                 }
@@ -1596,7 +1732,7 @@ class Log_Manager_ACF_Tracker
                     $field_label = $current_field['label'] ?? $field_name;
                     $changes[$field_label] = [
                         'action' => 'field_value_added',
-                        'value' => $this->format_acf_field_value($current_field['value'], $current_field['type'])
+                        'value' => $this->sdw_format_acf_field_value($current_field['value'], $current_field['type'])
                     ];
                     $has_changes = true;
                 }
@@ -1610,7 +1746,7 @@ class Log_Manager_ACF_Tracker
                     $field_label = $old_field['label'] ?? $field_name;
                     $changes[$field_label . '_removed'] = [
                         'action' => 'field_value_cleared',
-                        'old_value' => $this->format_acf_field_value($old_field['value'], $old_field['type'])
+                        'old_value' => $this->sdw_format_acf_field_value($old_field['value'], $old_field['type'])
                     ];
                     $has_changes = true;
                 }
@@ -1630,11 +1766,11 @@ class Log_Manager_ACF_Tracker
             ];
 
             if ($edit_url) {
-                $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'>✏️ Edit term</a>";
+                $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit term</a>";
             }
 
             if (!is_wp_error($term_url) && $term_url) {
-                $details['view_term'] = "<a href='" . esc_url($term_url) . "' target='_blank'>👁️ View term</a>";
+                $details['view_term'] = "<a href='" . esc_url($term_url) . "' target='_blank'> View term</a>";
             }
 
             Log_Manager::log(
