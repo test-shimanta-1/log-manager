@@ -32,20 +32,20 @@ require_once LOG_MANAGER_PLUGIN_DIR . 'includes/class-log-manager-settings.php';
 
 // Initialize plugin
 add_action('plugins_loaded', function() {
-    Log_Manager::init();
+    Log_Manager::sdw_init();
 
-    Log_Manager_Settings::init();
+    Log_Manager_Settings::sdw_init();
 });
 
 // Activation hook
-register_activation_hook(__FILE__, ['Log_Manager', 'activate']);
+register_activation_hook(__FILE__, ['Log_Manager', 'sdw_activate']);
 
 // Deactivation hook
-register_deactivation_hook(__FILE__, ['Log_Manager', 'deactivate']);
+register_deactivation_hook(__FILE__, ['Log_Manager', 'sdw_deactivate']);
 
 // Handle export requests early
 add_action('admin_init', function() {
     if (isset($_GET['page']) && $_GET['page'] === 'log-manager' && isset($_GET['export_type'])) {
-        Log_Manager_Export::handle_export_request();
+        Log_Manager_Export::sdw_handle_export_request();
     }
 });

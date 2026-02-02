@@ -7,6 +7,12 @@
  * @package Log_Manager
  * @since 1.0.6
  */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class Log_Manager_Settings
 {
     const OPTION_NAME = 'log_manager_settings';
@@ -256,7 +262,7 @@ class Log_Manager_Settings
 
         // Log the cleanup action
         if ($deleted !== false) {
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'logs_cleaned',
                 'system',
                 0,

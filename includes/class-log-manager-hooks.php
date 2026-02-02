@@ -7,6 +7,12 @@
  * @package Log_Manager
  * @since 1.0.6
  */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class Log_Manager_Hooks
 {
     private static $old_post_data = [];
@@ -153,7 +159,7 @@ class Log_Manager_Hooks
         }
 
         // Admin menu
-        add_action('admin_menu', ['Log_Manager', 'add_admin_menu']);
+        add_action('admin_menu', ['Log_Manager', 'sdw_add_admin_menu']);
 
         // Bulk actions
         add_action('handle_bulk_actions-edit-post', [$this, 'sdw_handle_bulk_action_post'], 10, 3);
@@ -713,7 +719,7 @@ class Log_Manager_Hooks
                 $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
             }
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'post_updated',
                 $post->post_type,
                 $post_id,
@@ -973,7 +979,7 @@ class Log_Manager_Hooks
             $details['post_type_label'] = $post_type_obj->labels->singular_name;
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             $action,
             $post->post_type,
             $post_id,
@@ -1024,7 +1030,7 @@ class Log_Manager_Hooks
             $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'revision_created',
             'revision',
             $revision_id,
@@ -1060,7 +1066,7 @@ class Log_Manager_Hooks
             $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_deleted',
             $post->post_type,
             $post_id,
@@ -1099,7 +1105,7 @@ class Log_Manager_Hooks
             $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_trashed',
             $post->post_type,
             $post_id,
@@ -1140,7 +1146,7 @@ class Log_Manager_Hooks
             $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_untrashed',
             $post->post_type,
             $post_id,
@@ -1205,7 +1211,7 @@ class Log_Manager_Hooks
             'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'> View post</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_trashed',
             $post->post_type,
             $post_id,
@@ -1231,7 +1237,7 @@ class Log_Manager_Hooks
             'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'> View post</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_untrashed',
             $post->post_type,
             $post_id,
@@ -1258,7 +1264,7 @@ class Log_Manager_Hooks
             'view_post' => get_permalink($post_id) ? "<a href='" . esc_url(get_permalink($post_id)) . "' target='_blank'> View post</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_deleted',
             $post->post_type,
             $post_id,
@@ -1392,7 +1398,7 @@ class Log_Manager_Hooks
                 $post_details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
             }
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'post_updated',
                 $post->post_type,
                 $post_id,
@@ -1533,7 +1539,7 @@ class Log_Manager_Hooks
             $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'taxonomy_updated',
             'post',
             $object_id,
@@ -1640,7 +1646,7 @@ class Log_Manager_Hooks
         }
 
         if ($has_changes) {
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'term_updated',
                 'term',
                 $term_id,
@@ -1726,7 +1732,7 @@ class Log_Manager_Hooks
                 $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit term</a>";
             }
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'term_created',
                 'term',
                 $term_id,
@@ -1766,7 +1772,7 @@ class Log_Manager_Hooks
             'parent' => $parent_info ?: 'No parent'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'term_deleted',
             'term',
             $term_id,
@@ -1811,7 +1817,7 @@ class Log_Manager_Hooks
                 $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit {$tax_name}</a>";
             }
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'term_meta_updated',
                 'term',
                 $term_id,
@@ -1853,7 +1859,7 @@ class Log_Manager_Hooks
             $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit {$tax_name}</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'term_meta_added',
             'term',
             $term_id,
@@ -1894,7 +1900,7 @@ class Log_Manager_Hooks
             $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit {$tax_name}</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'term_meta_deleted',
             'term',
             $term_id,
@@ -1985,7 +1991,7 @@ class Log_Manager_Hooks
         }
 
         if (count($changes) > 1) {
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'user_updated',
                 'user',
                 $user_id,
@@ -2011,7 +2017,7 @@ class Log_Manager_Hooks
             'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'user_registered',
             'user',
             $user_id,
@@ -2036,7 +2042,7 @@ class Log_Manager_Hooks
             'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'password_reset',
             'user',
             $user->ID,
@@ -2061,7 +2067,7 @@ class Log_Manager_Hooks
             'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'password_changed',
             'user',
             $user->ID,
@@ -2088,7 +2094,7 @@ class Log_Manager_Hooks
                 'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
             ];
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'user_role_changed',
                 'user',
                 $user_id,
@@ -2115,7 +2121,7 @@ class Log_Manager_Hooks
                 'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
             ];
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'password_reset_requested',
                 'user',
                 $user->ID,
@@ -2148,7 +2154,7 @@ class Log_Manager_Hooks
             $details['note'] = '👑 Administrator login';
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'user_login',
             'user',
             $user->ID,
@@ -2166,7 +2172,7 @@ class Log_Manager_Hooks
         $user = wp_get_current_user();
         if ($user->ID) {
             $profile_url = get_author_posts_url($user->ID);
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'user_logout',
                 'user',
                 $user->ID,
@@ -2207,7 +2213,7 @@ class Log_Manager_Hooks
                 'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
             ];
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'user_meta_updated',
                 'user',
                 $user_id,
@@ -2241,7 +2247,7 @@ class Log_Manager_Hooks
             'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'user_meta_added',
             'user',
             $user_id,
@@ -2274,7 +2280,7 @@ class Log_Manager_Hooks
             'visit_user' => $profile_url ? "<a href='" . esc_url($profile_url) . "' target='_blank'> Visit profile</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'user_meta_deleted',
             'user',
             $user_id,
@@ -2311,7 +2317,7 @@ class Log_Manager_Hooks
             $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'> Plugin details</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'plugin_activated',
             'plugin',
             0,
@@ -2347,7 +2353,7 @@ class Log_Manager_Hooks
             $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'> Plugin details</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'plugin_deactivated',
             'plugin',
             0,
@@ -2383,7 +2389,7 @@ class Log_Manager_Hooks
             $details['plugin_details'] = "<a href='" . esc_url($plugin_url) . "' target='_blank'> Plugin details</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'plugin_deleted',
             'plugin',
             0,
@@ -2418,7 +2424,7 @@ class Log_Manager_Hooks
             $details['new_theme_details'] = "<a href='" . esc_url($new_theme_url) . "' target='_blank'> New theme details</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'theme_switched',
             'theme',
             0,
@@ -2515,7 +2521,7 @@ class Log_Manager_Hooks
             $changes['settings_page'] = $settings_page;
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'option_updated',
             'option',
             0,
@@ -2924,7 +2930,7 @@ class Log_Manager_Hooks
                 'widget' => ucwords(str_replace('_', ' ', $widget_name))
             ];
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'widget_updated',
                 'widget',
                 0,
@@ -2937,7 +2943,7 @@ class Log_Manager_Hooks
         if ($option_name === 'sidebars_widgets') {
             $details = ['action' => 'Widget arrangement changed'];
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'widgets_rearranged',
                 'widget',
                 0,
@@ -2993,7 +2999,7 @@ class Log_Manager_Hooks
             $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'> Edit post</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'comment_posted',
             'comment',
             $comment_id,
@@ -3042,7 +3048,7 @@ class Log_Manager_Hooks
             $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'> Edit post</a>";
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'comment_edited',
             'comment',
             $comment_id,
@@ -3081,7 +3087,7 @@ class Log_Manager_Hooks
                 $details['edit_post'] = "<a href='" . esc_url($post_edit_url) . "' target='_blank'> Edit post</a>";
             }
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'comment_deleted',
                 'comment',
                 $comment_id,
@@ -3107,7 +3113,7 @@ class Log_Manager_Hooks
             'comment_id' => $comment_id
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'comment_status_changed',
             'comment',
             $comment_id,
@@ -3136,7 +3142,7 @@ class Log_Manager_Hooks
             'uploaded_by' => get_user_by('id', $attachment->post_author)->display_name ?? 'Unknown'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'media_added',
             'attachment',
             $attachment_id,
@@ -3160,7 +3166,7 @@ class Log_Manager_Hooks
             'view_media' => $file_url ? "<a href='" . esc_url($file_url) . "' target='_blank'> View media</a>" : ''
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'media_edited',
             'attachment',
             $attachment_id,
@@ -3207,7 +3213,7 @@ class Log_Manager_Hooks
                     $details['file_url'] = $file_url;
                 }
 
-                Log_Manager::log(
+                Log_Manager::sdw_log(
                     'media_deleted',
                     'attachment',
                     $attachment_id,
@@ -3216,7 +3222,7 @@ class Log_Manager_Hooks
                     'warning'
                 );
             } else {
-                Log_Manager::log(
+                Log_Manager::sdw_log(
                     'post_deleted',
                     $attachment->post_type,
                     $attachment_id,
@@ -3245,7 +3251,7 @@ class Log_Manager_Hooks
             'action' => 'Import started'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'import_started',
             'tool',
             0,
@@ -3267,7 +3273,7 @@ class Log_Manager_Hooks
             'action' => 'Import completed'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'import_completed',
             'tool',
             0,
@@ -3332,7 +3338,7 @@ class Log_Manager_Hooks
             $details['post_type'] = $post_type_obj ? $post_type_obj->labels->name : $args['post_type'];
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'export_started',
             'tool',
             0,
@@ -3382,7 +3388,7 @@ class Log_Manager_Hooks
                     $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
                 }
 
-                Log_Manager::log(
+                Log_Manager::sdw_log(
                     'featured_image_added',
                     'post',
                     $post_id,
@@ -3432,7 +3438,7 @@ class Log_Manager_Hooks
                             $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
                         }
 
-                        Log_Manager::log(
+                        Log_Manager::sdw_log(
                             'featured_image_changed',
                             'post',
                             $post_id,
@@ -3454,7 +3460,7 @@ class Log_Manager_Hooks
                             $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
                         }
 
-                        Log_Manager::log(
+                        Log_Manager::sdw_log(
                             'featured_image_added',
                             'post',
                             $post_id,
@@ -3499,7 +3505,7 @@ class Log_Manager_Hooks
                     $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
                 }
 
-                Log_Manager::log(
+                Log_Manager::sdw_log(
                     'featured_image_removed',
                     'post',
                     $post_id,
@@ -3566,7 +3572,7 @@ class Log_Manager_Hooks
                         $details['edit_term'] = "<a href='" . esc_url($edit_url) . "' target='_blank'> Edit term</a>";
                     }
 
-                    Log_Manager::log(
+                    Log_Manager::sdw_log(
                         'acf_fields_updated',
                         'term',
                         $term_id,
@@ -3622,7 +3628,7 @@ class Log_Manager_Hooks
                 $details['view_post'] = "<a href='" . esc_url($view_url) . "' target='_blank'> View post</a>";
             }
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'acf_fields_updated',
                 'post',
                 $post_id,
@@ -4229,7 +4235,7 @@ class Log_Manager_Hooks
             $severity = 'notice';
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_meta_updated',
             $post->post_type,
             $post_id,
@@ -4293,7 +4299,7 @@ class Log_Manager_Hooks
             $severity = 'notice';
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_meta_added',
             $post->post_type,
             $post_id,
@@ -4357,7 +4363,7 @@ class Log_Manager_Hooks
             $severity = 'error';
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'post_meta_deleted',
             $post->post_type,
             $post_id,
@@ -4682,7 +4688,7 @@ class Log_Manager_Hooks
             'action' => 'Menu updated'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'menu_updated',
             'menu',
             $menu_id,
@@ -4704,7 +4710,7 @@ class Log_Manager_Hooks
             'action' => 'Menu created'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'menu_created',
             'menu',
             $menu_id,
@@ -4724,7 +4730,7 @@ class Log_Manager_Hooks
             'action' => 'Menu deleted'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'menu_deleted',
             'menu',
             $menu_id,
@@ -4745,7 +4751,7 @@ class Log_Manager_Hooks
             'action' => 'Sidebar widgets arrangement updated'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'sidebar_widgets_updated',
             'widget',
             0,
@@ -4765,7 +4771,7 @@ class Log_Manager_Hooks
             'action' => 'Customizer settings saved'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'customizer_saved',
             'theme',
             0,
@@ -4821,7 +4827,7 @@ class Log_Manager_Hooks
             $details['attempt_count'] = $is_brute_force['attempt_count'];
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'login_failed',
             'security',
             0,
@@ -5632,7 +5638,7 @@ class Log_Manager_Hooks
             $details['note'] = 'Field group saved (no changes detected)';
         }
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'acf_field_group_updated',
             'acf',
             $field_group['ID'] ?? 0,
@@ -6015,7 +6021,7 @@ class Log_Manager_Hooks
             'action' => 'ACF Field Group deleted'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'acf_field_group_deleted',
             'acf',
             $field_group['ID'] ?? 0,
@@ -6041,7 +6047,7 @@ class Log_Manager_Hooks
             'action' => 'ACF Field Group duplicated'
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'acf_field_group_duplicated',
             'acf',
             $field_group['ID'] ?? 0,
@@ -6109,7 +6115,7 @@ class Log_Manager_Hooks
             'action' => "ACF field {$action}"
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'acf_field_updated',
             'acf',
             $field_data['ID'],

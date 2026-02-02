@@ -7,6 +7,12 @@
  * @package Log_Manager
  * @since 1.0.6
  */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class Log_Manager
 {
     /**
@@ -152,7 +158,7 @@ class Log_Manager
     public static function sdw_log($action, $object_type = '', $object_id = 0, $object_name = '', $details = [], $severity = 'info')
     {
         // Get log destination from settings
-        $destination = Log_Manager_Settings::get_log_destination();
+        $destination = Log_Manager_Settings::sdw_get_log_destination();
 
         // Call appropriate logging method
         if ($destination === 'textfile') {

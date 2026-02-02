@@ -7,6 +7,12 @@
  * @package Log_Manager
  * @since 1.0.6
  */
+
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class Log_Manager_ACF_Tracker
 {
 
@@ -1172,7 +1178,7 @@ class Log_Manager_ACF_Tracker
         }
 
         // Log to database
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'acf_field_group_updated',
             'acf',
             $field_group['ID'],
@@ -1200,7 +1206,7 @@ class Log_Manager_ACF_Tracker
             'edit_acf_group' => "<a href='" . esc_url($edit_url) . "' target='_blank'>🔧 Edit ACF Field Group</a>"
         ];
 
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'acf_field_group_duplicated',
             'acf',
             $new_field_group['ID'],
@@ -1232,7 +1238,7 @@ class Log_Manager_ACF_Tracker
                 'key' => $field_group['key']
             ];
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'acf_field_group_deleted',
                 'acf',
                 $post_id,
@@ -1670,7 +1676,7 @@ class Log_Manager_ACF_Tracker
         }
 
         // Log to database
-        Log_Manager::log(
+        Log_Manager::sdw_log(
             'acf_fields_updated',
             $object_type,
             $post_id,
@@ -1773,7 +1779,7 @@ class Log_Manager_ACF_Tracker
                 $details['view_term'] = "<a href='" . esc_url($term_url) . "' target='_blank'> View term</a>";
             }
 
-            Log_Manager::log(
+            Log_Manager::sdw_log(
                 'acf_fields_updated',
                 'term',
                 $term_id,

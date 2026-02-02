@@ -6,9 +6,11 @@
  * @since 1.0.6
  */
 
-/**
- * Handles exporting of logs to various formats (CSV, PDF)
- */
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 class Log_Manager_Export
 {
     /**
